@@ -833,12 +833,12 @@ def f_info():
 def run_asr():
 	global args
 	with open(f'{K.tmp_dir}/rec.webm', 'rb') as f:
-		r = requests.post(args.cloud+'/run_asr/base', files={'file': f}, timeout=8)
+		r = requests.post(args.cloud+'/run_asr', files={'file': f}, timeout=8)
 	asr_output = json.loads(r.text) if r.status_code==200 else {}
-	return asr_output
+	return asr_output, r
 
 def _add_spoken(client_ip, user, getString):
-	asr_output = run_asr()
+	asr_output, r = run_asr()
 
 	print(f'ASR result: {asr_output}', file=sys.stderr)
 	if asr_output=={} or type(asr_output)==str:
@@ -869,8 +869,8 @@ def add_spoken(user):
 def get_ASR(cmd=''):
 	with open(f'{K.tmp_dir}/rec.webm', 'wb') as fp:
 		fp.write(request.data)
-	asr_output = run_asr()
-	return asr_output['text']
+	asr_output, r = run_asr()
+	return asr_output['text'], r.status_code
 
 
 # Delay system commands to allow redirect to render first

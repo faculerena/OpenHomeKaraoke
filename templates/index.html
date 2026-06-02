@@ -172,21 +172,9 @@ post_switch = (url, data)=>{$.post(url, data, (_)=>{
 	closeNav();
 })}
 var ASR_hook = '';
-function ASR(task=""){
-	if(g_stream==null && window.location.href.startsWith('http://')){
-		if(confirm("{{getString1(214)}}")){
-			var port = parseInt(window.location.href.split(':')[2]);
-			window.location.href = window.location.href.replace('http:', 'https:').replace(port, port+1);
-		}else if(window.navigator.userAgent.includes('Chrome')){
-			if(confirm("{{getString1(234)}}")){
-				alert("{{getString1(235)}}");
-				openInNewTab("");
-			}
-		}
-		return;
-	}
-	if(g_stream==null)
-		return alert("{{getString1(215)}}");
+async function ASR(task=""){
+	await enableMic();
+	if(g_stream==null) return;
 
 	open_wsock_if_nec();
 
@@ -266,6 +254,7 @@ function onRecStop(){
 	siriWave.stop();
 	clearTimeout(recorder_timeout);
 	recorder = null;
+	disableMic();
 	if(!use_recorded) return;
 	if(ASR_hook) return setTimeout(ASR_hook, 1);
 	var blob = new Blob(audios, { type: "audio/webm" });
@@ -273,7 +262,52 @@ function onRecStop(){
 	req.open("POST", `/add_spoken/${currentUser}`, true);
 	req.send(blob);
 }
-
+function resolveMic(clicked=false) {
+	if(!clicked) return;
+	if(window.location.href.startsWith('http://')){
+		if(confirm("{{getString1(214)}}")){
+			var port = parseInt(window.location.href.split(':')[2]);
+			window.location.href = window.location.href.replace('http:', 'https:').replace(port, port+1);
+		}else if(window.navigator.userAgent.includes('Chrome')){
+			if(confirm("{{getString1(234)}}")){
+				alert("{{getString1(235)}}");
+				openInNewTab("");
+			}
+		}else if(window.navigator.userAgent.includes('Firefox')){
+			if(confirm("{{getString1(236)}}")){
+				alert("{{getString1(237)}}");
+				openInNewTab("");
+			}
+		}
+	}
+	return alert("{{getString1(215)}}");
+}
+function requestMic(clicked=false) {
+	if (g_stream !== undefined) return;
+	if (navigator.permissions && navigator.permissions.query) {
+		navigator.permissions.query({ name: 'microphone' })
+		.then(status => {
+			if(status.state=='denied')
+				return resolveMic(clicked);
+			else
+				g_stream=null;
+		})
+		.catch(err => {
+			getById('recButton').style.display='none';
+			console.log("getUserMedia not supported on your browser!"); 
+		});
+	}else resolveMic(clicked);
+}
+async function enableMic() {
+	if (g_stream!=null) return;
+	if (g_stream===undefined) requestMic(true);
+	g_stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+}
+function disableMic() {
+	if (!g_stream) return;
+	g_stream.getAudioTracks().forEach(t => t.stop());
+	g_stream = null;
+}
 function showNotification(message, categoryClass, timeout=3000) {
 	$("#notification").addClass(categoryClass)
 	$("#notification div").text(message)
@@ -353,15 +387,6 @@ $('#current-lang').click(function(e) {
 		popUpList.dialog();
 	});
 });
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-	navigator.mediaDevices.getUserMedia({audio: true,},)
-		.then(stream => Promise.all([stream, navigator.mediaDevices.enumerateDevices()]))
-		.then(([stream, devices]) => { g_stream = stream; g_devices = devices; })
-		.catch((err) => { console.error(`The following getUserMedia error occurred: ${err}`);
-	});
-} else {
-	console.log("getUserMedia not supported on your browser!");
-}
 function open_wsock_if_nec(){
 	if(ws==null || ws.readyState>1){
 		ws = new WebSocket((window.location.href.startsWith('https:')?'wss://':'ws://') + location.host + '/ws_init');
