@@ -1,6 +1,6 @@
 import os, sys, re, random, shutil
 import string, logging, time
-import subprocess, zipfile
+import subprocess, zipfile, signal
 
 import requests
 
@@ -129,24 +129,29 @@ class VLCClient:
 		else:
 			return file_path
 
+	def kill(self):
+		if self.process is not None and self.process.poll() is None:
+			logging.debug("VLC is currently playing, killing ...")
+			try:
+				self.process.kill()
+				self.process.wait(timeout=1)
+			except subprocess.TimeoutExpired:
+				logging.debug("VLC process not killed after 1s, killing entire process group...")
+				os.killpg(self.process.pid, signal.SIGKILL)
+			self.process = None
+
 	def play_file(self, file_path, volume, params = []):
 		try:
 			file_path = self.process_file(file_path)
 			self.is_transposing = True
-			if self.process is not None and self.process.poll() is None:
-				logging.debug("VLC is currently playing, stopping track...")
-				# must wait for VLC to quit or force kill, otherwise VLC http server will be borked
-				try:
-					self.stop()
-					self.process.wait(2)
-				except:
-					self.process.kill()
 			command = self.cmd_base + params + [file_path]
 			if self.platform == 'osx' and not os.K.full_screen:
 				command.remove('--fullscreen')
 				command.remove('--macosx-nativefullscreenmode')
-			logging.info("VLC Command: %s" % command)
 
+			self.kill()
+
+			logging.info("VLC Command: %s" % command)
 			self.process = subprocess.Popen(command, stdin = subprocess.PIPE)
 
 			# wait for the process to start
@@ -304,9 +309,10 @@ class VLCClient:
 			return
 
 	def restart(self):
-		logging.info(self.command("seek&val=0"))
+		ret = self.command("seek&val=0")
+		logging.info(f"seek to 0s: {ret}")
 		self.play()
-		return self.command("seek&val=0")
+		return ret
 
 	def vol_up(self):
 		return self.command(f"volume&val=+{self.vol_increment}")
@@ -319,13 +325,6 @@ class VLCClient:
 
 	def playspeed_set(self, value):
 		return self.command(f"rate&val={value}")
-
-	def kill(self):
-		try:
-			if self.process is not None: self.process.kill()
-		except (OSError, AttributeError) as e:
-			print(e)
-		return
 
 	def is_running(self):
 		return (self.process != None and self.process.poll() == None) or self.is_transposing

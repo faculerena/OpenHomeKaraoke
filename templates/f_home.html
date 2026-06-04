@@ -199,11 +199,7 @@ $("#vol").blur(() => {
 	volume_changing = false;
 });
 
-$("#restart").click(() => {
-	if (checkUser() || confirm("{{getString1(71)}}"))
-		$.get("/restart");
-});
-
+$("#restart").click(() => { $.get("/restart"); });
 $("#skip").click(() => {if (checkUser() || confirm("{{getString1(72)}}")) {$.get("/skip");}});
 $("#delay-val").keypress(function (e) {
 	var ch = String.fromCharCode(e.which);
