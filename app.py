@@ -43,9 +43,11 @@ def ws_init(sock):
 		try:
 			cmd = sock.receive()
 			wscmd(key, cmd)
-		except:
+		except Exception:
+			if not sock.connected:      # client just disconnected — normal, not an error
+				break
 			traceback.print_exc()
-	ip2websock.pop(key)
+	ip2websock.pop(key, None)
 
 def wscmd(client_ip, cmd):
 	if cmd.startswith('pop_from_queue '):
