@@ -437,26 +437,45 @@ class Karaoke:
 		return ret_code
 
 	def get_search_results(self, textToSearch):
+		# Karaoke Mugen first: ready-made, hand-timed color-wipe karaoke (anime/J-pop/game/Vocaloid).
+		# Downloading one of these pulls its media + .ass instead of a YouTube rip.
+		km_results = []
+		try:
+			from lib import karamugen
+			for r in karamugen.search(textToSearch.replace(' karaoke', '').strip(), 6)[:3]:
+				km_results.append(['🎤 ' + karamugen.label(r) + '  [Karaoke Mugen]',
+				                   'karamugen:' + r['kid'], r['kid'], sec2hhmmss(r['duration'])])
+		except Exception as e:
+			logging.debug("Karaoke Mugen search failed: " + str(e))
+
+		# YouTube Music: clean official audio (no music-video intros / long silences)
+		ytm_results = []
+		try:
+			from lib import ytmusic
+			for r in ytmusic.search(textToSearch.replace(' karaoke', '').strip(), 4):
+				ytm_results.append(['🎵 ' + ytmusic.label(r) + '  [YT Music · clean audio]',
+				                    'https://www.youtube.com/watch?v=' + r['videoId'], r['videoId'], r['duration']])
+		except Exception as e:
+			logging.debug("YouTube Music search failed: " + str(e))
+
 		logging.info("Searching YouTube for: " + textToSearch)
 		num_results = 10
 		yt_search = 'ytsearch%d:%s' % (num_results, textToSearch)
 		cmd = ["-j", "--no-playlist", "--flat-playlist", yt_search]
 		logging.debug("Youtube-dl search command: " + " ".join(cmd))
+		rc = []
 		try:
-			# output = subprocess.check_output(cmd).decode("utf-8")
 			output = self.call_yt_dlp(cmd, True)
 			logging.debug("Search results: " + output)
-			rc = []
 			for each in output.split("\n"):
 				if len(each) > 2:
 					j = json.loads(each)
 					if (not "title" in j) or (not "url" in j):
 						continue
 					rc.append([j["title"], j["url"], j["id"], sec2hhmmss(j["duration"])])
-			return rc
 		except Exception as e:
 			logging.debug("Error while executing search: " + str(e))
-			raise e
+		return km_results + ytm_results + rc
 
 	def get_yt_dlp_json(self, url):
 		# out_json = subprocess.check_output([self.youtubedl_path, '-j', url])
@@ -483,6 +502,8 @@ class Karaoke:
 		return filename if os.path.isfile(self.download_path+'tmp/'+filename) else None
 
 	def download_video(self, client_lang='', client_ip='', song_url = '', enqueue = False, song_added_by = "Pikaraoke", include_subtitles = False, high_quality = False):
+		if song_url.startswith('karamugen:'):
+			return self._download_karamugen(song_url, client_lang, client_ip, enqueue, song_added_by)
 		logging.info("Downloading video: " + song_url)
 		getString2 = lambda ii: os.langs.get(client_lang, os.langs['en_US'])[ii]
 		self.downloading_songs[song_url] = 1
