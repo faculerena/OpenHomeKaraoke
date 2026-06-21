@@ -505,8 +505,25 @@ class Karaoke:
 			if bn:
 				shutil.move(self.download_path+'tmp/'+bn, self.download_path+bn)
 				self.get_available_songs()
+				song_path = self.download_path + bn
+				generating = self._autogen_karaoke(song_path)
+				if generating and enqueue:
+					# Defer the enqueue until the color-wipe .ass is ready, so the song never
+					# reaches the queue (and gets played) without its karaoke subtitles.
+					self.downloading_songs[song_url] = '00'
+					flash(getString2(189) + ' — generating karaoke…', client_ip = client_ip)
+					ws_send(client_ip, 'download_ended()')
+					ass = os.path.splitext(song_path)[0] + '.ass'
+					for _ in range(180):                       # wait up to ~3 min for the .ass
+						if os.path.isfile(ass) or not getattr(self, 'running', True):
+							break
+						time.sleep(1)
+					self.enqueue(song_path, song_added_by)
+					flash('🎤 Karaoke ready — added to queue!' if os.path.isfile(ass)
+					      else getString2(189) + ' ' + getString2(191), client_ip = client_ip)
+					return
 				if enqueue:
-					self.enqueue(self.download_path+bn, song_added_by)
+					self.enqueue(song_path, song_added_by)
 					self.downloading_songs[song_url] = '00'
 					flash(getString2(189)+' '+getString2(191), client_ip = client_ip)
 				else:
@@ -517,6 +534,53 @@ class Karaoke:
 				flash(getString2(189)+' '+getString2(192), client_ip = client_ip)
 		else:
 			logging.error("Error downloading song: " + song_url)
+			self.downloading_songs[song_url] = -1
+			flash(getString2(190), client_ip = client_ip)
+		return ws_send(client_ip, 'download_ended()')
+
+	def _autogen_karaoke(self, media_path):
+		# Ask the cloud (asr_server) to auto-generate a color-wipe <base>.ass for a freshly
+		# downloaded song. Returns True if generation was kicked off (so callers can wait for it).
+		if not self.cloud or os.path.isfile(os.path.splitext(media_path)[0] + '.ass'):
+			return False
+		try:
+			requests.post(self.cloud + '/make_karaoke', data = {'path': media_path}, timeout = 5)
+			logging.info("Requested auto color-wipe for: " + os.path.basename(media_path))
+			return True
+		except Exception as e:
+			logging.debug("Karaoke auto-gen request failed: " + str(e))
+			return False
+
+	def _download_karamugen(self, song_url, client_lang, client_ip, enqueue, song_added_by):
+		# Pull a ready-made karaoke (media + hand-timed color-wipe .ass) from Karaoke Mugen.
+		from lib import karamugen
+		getString2 = lambda ii: os.langs.get(client_lang, os.langs['en_US'])[ii]
+		kid = song_url.split(':', 1)[1]
+		logging.info("Downloading from Karaoke Mugen: " + kid)
+		self.downloading_songs[song_url] = 1
+		try:
+			r = karamugen.get(kid)
+			title = (r['series'] + ' - ' if r['series'] else '') + (r['title'] or kid)
+			if r['types']:
+				title += ' [' + '/'.join(r['types']) + ']'
+			name = ''.join('_' if c in '/\\\n\r\t' else c for c in title).strip() + '---' + kid
+			tmp = self.download_path + 'tmp'
+			os.makedirs(tmp, exist_ok = True)
+			media_tmp, ass_tmp = karamugen.download(r, tmp, name)
+			media_bn = os.path.basename(media_tmp)
+			shutil.move(media_tmp, self.download_path + media_bn)
+			shutil.move(ass_tmp, self.download_path + os.path.basename(ass_tmp))
+			self.downloading_songs[song_url] = 0
+			self.get_available_songs()
+			if enqueue:
+				self.enqueue(self.download_path + media_bn, song_added_by)
+				self.downloading_songs[song_url] = '00'
+				flash(getString2(189) + ' ' + getString2(191), client_ip = client_ip)
+			else:
+				flash(getString2(189), client_ip = client_ip)
+		except Exception as e:
+			logging.error("Karaoke Mugen download failed: " + str(e))
+			traceback.print_exc()
 			self.downloading_songs[song_url] = -1
 			flash(getString2(190), client_ip = client_ip)
 		return ws_send(client_ip, 'download_ended()')
@@ -634,7 +698,16 @@ class Karaoke:
 			if self.subtitle_delay:
 				extra_params1 += [f'--sub-delay={self.subtitle_delay * 10}']
 			if self.show_subtitle:
-				extra_params1 += [f'--sub-track=0']
+				# Prefer an external subtitle next to the media, in priority order:
+				#   <base>.ass        -> syllable color-wipe karaoke (Karaoke Mugen / make-karaoke.py)
+				#   <base>.romaji.srt -> romanized Japanese (romanize_subs.py)
+				#   embedded track 0  -> whatever shipped in the video
+				stem = os.path.splitext(file_path)[0]
+				ext_sub = next((stem + e for e in ('.ass', '.romaji.srt') if os.path.isfile(stem + e)), None)
+				if ext_sub:
+					extra_params1 += [f'--sub-file={ext_sub}']
+				else:
+					extra_params1 += ['--sub-track=0']
 			if self.play_speed != 1:
 				extra_params1 += [f'--rate={self.play_speed}']
 			self.now_playing = self.filename_from_path(file_path)
