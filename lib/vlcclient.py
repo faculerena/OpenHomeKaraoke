@@ -71,6 +71,9 @@ class VLCClient:
 			"--no-repeat",
 			"--no-input-fast-seek",
 			"--mouse-hide-timeout", "10",
+			# Render non-Latin subtitles (CJK/etc.) instead of tofu boxes. Noto Sans CJK
+			# also covers Latin, so English subs are unaffected. Needs noto-fonts-cjk installed.
+			"--freetype-font", "Noto Sans CJK JP",
 		]
 		if self.platform == "osx":
 			self.cmd_base += [
