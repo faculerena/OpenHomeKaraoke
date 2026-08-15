@@ -59,7 +59,12 @@ ADMIN_OPT=""
 [ -n "$ADMIN_PW" ] && ADMIN_OPT="--admin-password '$ADMIN_PW'"
 # with -c the splash/QR must point at the public hostnames, not the LAN IP
 URL_OPT=""
-[ "$WITH_CF" = 1 ] && URL_OPT="--url '$CF_URL' --tv-url '$CF_TV_URL'"
+# OHK_APP_URL: the TV page polls the app for what is playing and posts the singer's
+# recording there for scoring, so it needs an address it can reach from the TV machine.
+if [ "$WITH_CF" = 1 ]; then
+	URL_OPT="--url '$CF_URL' --tv-url '$CF_TV_URL'"
+	export OHK_APP_URL="$CF_URL"
+fi
 if [ "$WITH_CF" = 1 ] && [ -z "$ADMIN_PW" ]; then
 	echo "REFUSING: -c publishes this to the internet, where an ungated GET /shutdown can" >&2
 	echo "halt this machine. Pass an admin password too, e.g.  -c -a mysecret" >&2

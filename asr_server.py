@@ -17,14 +17,14 @@
 # Whisper model (-m / $ASR_MODEL): tiny|base|small|medium|large-v3 (bigger = more accurate, slower).
 # Keep responses under app.py's 8s ASR timeout; "small" or "medium" are good on this GPU.
 
-import os, io, sys, uuid, tempfile, tarfile, argparse, threading, shutil
+import os, io, sys, uuid, tempfile, tarfile, argparse, threading, shutil, subprocess
 import torch
 from types import SimpleNamespace
 from flask import Flask, request, jsonify, Response
 import whisper
 
 # Reuse the project's own splitter pipeline (ffmpeg helpers + DNN split + model net)
-from lib import nets
+from lib import nets, scoring
 import vocal_splitter as VS
 
 app = Flask(__name__)
@@ -34,6 +34,7 @@ split_lock = threading.Lock()    # serialize DNN splits (independent of ASR so a
 gen_lock = threading.Lock()      # serialize karaoke .ass generation (one heavy Whisper run at a time)
 jobs = {}                        # remote karaoke jobs: id -> {'state': pending|done|error, 'dir': tmpdir}
 jobs_lock = threading.Lock()
+score_lock = threading.Lock()   # scoring is CPU (pyin); keep it off the ASR/karaoke locks
 
 
 def load_models(args):
@@ -173,6 +174,41 @@ def karaoke_result(job):
 	return Response(buf.read(), mimetype='application/gzip')
 
 
+@app.route('/score', methods=['POST'])
+def score():
+	"""Score a sung recording against the song's isolated vocal stem.
+	multipart 'file' (the recording) + 'name' (song file name) + optional 'offset' hint."""
+	f = request.files.get('file')
+	name = os.path.basename((request.form.get('name') or '').strip())
+	if not f or not name:
+		return jsonify({'score': 0, 'reason': 'missing file or name'}), 400
+	try:
+		hint = float(request.form.get('offset') or 0.0)
+	except ValueError:
+		hint = 0.0
+	vocal = os.path.join(G.songs, 'vocal', name + '.m4a')
+	ass   = os.path.join(G.songs, os.path.splitext(name)[0] + '.ass')
+	d = tempfile.mkdtemp(prefix='ohk_score_')
+	try:
+		raw = os.path.join(d, 'sung.webm')
+		f.save(raw)
+		# normalise to wav ourselves: the browser sends webm/opus and librosa's soundfile
+		# backend cannot read it (it would silently fall through to a slow audioread path)
+		wav = os.path.join(d, 'sung.wav')
+		subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', raw, '-ac', '1',
+		                '-ar', str(scoring.SR), wav], check=True)
+		with score_lock:
+			res = scoring.score_recording(wav, vocal, ass, hint)
+		res['song'] = name
+		print(f'score: {name} -> {res}', flush=True)
+		return jsonify(res)
+	except Exception as e:
+		print(f'score error: {e}', file=sys.stderr, flush=True)
+		return jsonify({'score': 0, 'reason': str(e)}), 500
+	finally:
+		shutil.rmtree(d, ignore_errors=True)
+
+
 def _split(media, nonvocal_m4a, vocal_m4a):
 	"""Run the vocal-remover DNN over `media`, writing both stems as m4a."""
 	tmp = tempfile.mkdtemp(prefix='ohk_gk_')
@@ -236,10 +272,13 @@ if __name__ == '__main__':
 	p.add_argument('-m', '--model', default=os.environ.get('ASR_MODEL', 'small'),
 	               help='Whisper model: tiny|base|small|medium|large-v3 (default: small)')
 	p.add_argument('-g', '--gpu', type=int, default=0, help='GPU id, -1 for CPU')
+	p.add_argument('-d', '--songs', default=os.path.expanduser('~/pikaraoke-songs'),
+	               help='Song library, used to find vocal/ stems and .ass files for scoring')
 	p.add_argument('--host', default='127.0.0.1',
 	               help='Bind address. Default 127.0.0.1 (local only). For a split deployment use '
 	                    'the Tailscale/LAN IP the app machine can reach — there is NO auth here, '
 	                    'so do not bind a public interface.')
 	args = p.parse_args()
+	G.songs = args.songs.rstrip('/')
 	load_models(args)
 	app.run(host=args.host, port=args.port, threaded=True)

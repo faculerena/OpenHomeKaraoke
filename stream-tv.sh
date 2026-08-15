@@ -9,16 +9,19 @@
 #                                    'auto' = the sole output on $WAYLAND_DISPLAY, e.g. a cage compositor)
 #   -p  HTTP port the TV opens      (default: 4000)
 #   -a  Pulse/PipeWire audio source (default: the default sink's .monitor)
+#   -u  URL of the karaoke app      (default: http://<this-ip>:5000) — the page polls it
+#       for what is playing and posts the singer's recording there for scoring
 #
 # Then open  http://<this-ip>:<port>  in the TV's browser (e.g. TV Bro). Ctrl-C to stop.
 set -u
 
-OUTPUT=""; PORT=4000; AUDIO=""
-while getopts "o:p:a:h" opt; do
+OUTPUT=""; PORT=4000; AUDIO=""; APP_URL="${OHK_APP_URL:-}"
+while getopts "o:p:a:u:h" opt; do
 	case $opt in
 		o) OUTPUT="$OPTARG";;
 		p) PORT="$OPTARG";;
 		a) AUDIO="$OPTARG";;
+		u) APP_URL="$OPTARG";;
 		h) grep '^#' "$0" | sed 's/^# \?//'; exit 0;;
 		*) exit 1;;
 	esac
@@ -49,6 +52,8 @@ if [ -z "$AUDIO" ]; then
 fi
 IP="$(ip -4 addr show scope global 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)"
 
+[ -z "$APP_URL" ] && APP_URL="http://$IP:5000"
+
 D="$(mktemp -d /tmp/ohk-tvstream.XXXXXX)"
 FIFO="$D/cap.ts"; mkfifo "$FIFO"
 cp -f static/hls.min.js "$D/hls.min.js"
@@ -60,9 +65,12 @@ cat > "$D/index.html" <<'HTML'
 <style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
 video{width:100vw;height:100vh;object-fit:contain;background:#000}
 #tap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-color:#fff;font:600 5vw sans-serif;background:rgba(0,0,0,.55);cursor:pointer}</style>
+color:#fff;font:600 5vw sans-serif;background:rgba(0,0,0,.55);cursor:pointer}
+#mic{display:none;position:fixed;top:12px;right:16px;color:#ff4444;font:600 2.2vw sans-serif;
+opacity:.85;text-shadow:0 0 6px #000}</style>
 </head><body>
 <video id="v" autoplay muted playsinline></video>
+<div id="mic">● REC</div>
 <div id="tap">Tap to start &amp; unmute</div>
 <script src="hls.min.js"></script>
 <script>
@@ -77,9 +85,59 @@ function start(){
   }else{v.src=url;}
 }
 start();
-tap.onclick=function(){v.muted=false;v.play();tap.style.display='none';};
+
+// ---- karaoke scoring -------------------------------------------------------------------
+// This page runs on the machine driving the TV, so it both PLAYS the backing track and can
+// capture the mic. That is the ideal spot: the browser's echo canceller knows exactly what
+// it just played, so it subtracts the backing track for us. noiseSuppression and
+// autoGainControl are deliberately OFF — both are tuned for speech and wreck pitch.
+var APP='__APP_URL__', rec=null, chunks=[], recSong=null, recOffset=0, micStream=null;
+
+function micOn(){
+  if(micStream) return Promise.resolve(micStream);
+  return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,
+    noiseSuppression:false, autoGainControl:false}}).then(function(s){micStream=s;return s;});
+}
+function startRec(song, offset){
+  micOn().then(function(s){
+    chunks=[]; recSong=song; recOffset=offset;
+    rec=new MediaRecorder(s,{mimeType:'audio/webm'});
+    rec.ondataavailable=function(e){ if(e.data.size) chunks.push(e.data); };
+    rec.onstop=function(){ uploadRec(); };
+    rec.start();
+    document.getElementById('mic').style.display='block';
+  }).catch(function(e){ console.log('mic unavailable:', e); });
+}
+function stopRec(){ if(rec && rec.state!=='inactive') rec.stop(); rec=null;
+                    document.getElementById('mic').style.display='none'; }
+function uploadRec(){
+  if(!chunks.length || !recSong) return;
+  var fd=new FormData();
+  fd.append('file', new Blob(chunks,{type:'audio/webm'}), 'sung.webm');
+  fd.append('song', recSong); fd.append('offset', recOffset); fd.append('user', 'TV');
+  fetch(APP+'/sing_upload',{method:'POST',body:fd}).catch(function(e){console.log('upload failed',e);});
+  chunks=[]; recSong=null;
+}
+
+// Poll what is playing and follow it: start on a new song, stop and upload when it ends.
+var lastSong=null;
+setInterval(function(){
+  fetch(APP+'/nowplaying').then(function(r){return r.json()}).then(function(d){
+    var song=d.now_playing_file || d.now_playing || null;
+    if(song!==lastSong){
+      if(lastSong) stopRec();
+      // seektrack_value is the true song position; the stream we hear lags it, but the
+      // server searches +/-3s around this hint when scoring, so a rough value is fine.
+      if(song) startRec(song, d.seektrack_value||0);
+      lastSong=song;
+    }
+  }).catch(function(){});
+}, 3000);
+
+tap.onclick=function(){v.muted=false;v.play();tap.style.display='none'; micOn();};
 </script></body></html>
 HTML
+sed -i "s|__APP_URL__|$APP_URL|g" "$D/index.html"
 
 CLEANED=0
 cleanup(){ [ "$CLEANED" = 1 ] && return; CLEANED=1; pkill -TERM -P $$ 2>/dev/null; sleep 0.4; pkill -KILL -P $$ 2>/dev/null; rm -rf "$D"; }

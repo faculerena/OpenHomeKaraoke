@@ -63,6 +63,7 @@ class Karaoke:
 	play_speed = 1.0
 	show_subtitle = True
 	last_vocal_info = 0
+	last_score = None          # {'score','user','at',...} set by app.py once a song is scored
 	last_vocal_time = 0
 	use_DNN_vocal = True
 	vocal_process = None
@@ -360,6 +361,21 @@ class Karaoke:
 					self.screen.blit(text[0], self.normalize((qr_size + 35, blitY - 120)))
 					text = self.render_font(sysfont_size, getString(52), (255, 255, 255))
 					self.screen.blit(text[0], self.normalize((qr_size + 35, blitY - 80)))
+
+		# Last karaoke score. VLC is fullscreen while a song plays, so pygame only reappears
+		# between songs — which is exactly when an end-score should land. It reaches the TV
+		# through the normal stream capture, so there is nothing to change on the TV side.
+		s = getattr(self, 'last_score', None)
+		if s and time.time() - s.get('at', 0) < 90:
+			val = int(s.get('score', 0))
+			col = (0, 255, 90) if val >= 80 else (255, 215, 0) if val >= 50 else (255, 120, 60)
+			who = (s.get('user') or '').strip()
+			big = self.render_font([120, 95, 75], f"{val}", col)
+			cap = self.render_font([46, 38, 30], (who + ' — ' if who else '') + 'PUNTAJE', (255, 255, 255))
+			cx = self.screen.get_width() // 2
+			top = self.normalize(70)
+			self.screen.blit(big[0], (cx - big[1].width // 2, top))
+			self.screen.blit(cap[0], (cx - cap[1].width // 2, top + big[1].height))
 
 		blitY = 10
 		if not self.has_video:

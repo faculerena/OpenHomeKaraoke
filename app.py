@@ -196,6 +196,9 @@ def nowplaying(return_json=True):
 		s = K.get_state()
 		rc = {
 			"now_playing": K.now_playing,
+			# the actual file name — scoring needs it to find vocal/<name>.m4a, and the
+			# display title has the ---id and extension stripped off
+			"now_playing_file": os.path.basename(K.now_playing_filename or '') or None,
 			"now_playing_user": K.now_playing_user,
 			"up_next": next_song,
 			"next_user": next_user,
@@ -853,6 +856,46 @@ def f_info():
 		admin = is_admin(),
 		admin_enabled = admin_password != None
 	)
+
+@app.after_request
+def _cors(resp):
+	# The TV page is served from a different origin (:4000 / tv.*), so it needs CORS to poll
+	# what is playing and to post a recording. Whitelisted rather than a blanket '*'.
+	if request.path in ('/nowplaying', '/sing_upload'):
+		resp.headers['Access-Control-Allow-Origin'] = '*'
+	return resp
+
+
+@app.route('/sing_upload', methods = ['POST', 'OPTIONS'])
+def sing_upload():
+	"""The TV page posts the singer's recording here once a song finishes. Scoring is slow
+	(pyin), so hand it to the cloud server in a thread and answer immediately."""
+	if request.method == 'OPTIONS':
+		return ('', 204)
+	f = request.files.get('file')
+	song = os.path.basename((request.form.get('song') or '').strip())
+	if not f or not song or not args.cloud:
+		return ('', 204)
+	data = f.read()
+	offset = request.form.get('offset') or '0'
+	user = (request.form.get('user') or '').strip()
+	threading.Thread(target = _score_bg, args = (data, song, offset, user), daemon = True).start()
+	return ('', 204)
+
+
+def _score_bg(data, song, offset, user):
+	try:
+		r = requests.post(args.cloud + '/score', files = {'file': ('sung.webm', data)},
+		                  data = {'name': song, 'offset': offset}, timeout = 900)
+		res = r.json()
+		if isinstance(res, dict) and 'score' in res:
+			res['user'] = user
+			res['at'] = time.time()
+			K.last_score = res
+			logging.info(f"Score for {song}: {res.get('score')} ({user})")
+	except Exception as e:
+		logging.error('Scoring failed: ' + traceback.format_exc())
+
 
 def run_asr():
 	global args
