@@ -68,6 +68,22 @@ rbutton {
 	white-space: nowrap;
 	transform:scale(1.2);
 }
+/* walking gnomes along the bottom (same idea as timbear.gratis) */
+@keyframes gnome-walk-r { from { left: -80px; } to { left: 100vw; } }
+@keyframes gnome-walk-l { from { left: 100vw; } to { left: -80px; } }
+@keyframes gnome-bob {
+	0%,100% { transform: translateY(0)    scaleY(1); }
+	25%     { transform: translateY(-4px) scaleY(1.05); }
+	50%     { transform: translateY(0)    scaleY(1); }
+	75%     { transform: translateY(-2px) scaleY(0.97); }
+}
+#gnomes { position: fixed; left: 0; bottom: 0; width: 100%; height: 90px; overflow: hidden;
+	pointer-events: none; z-index: 5; }
+.gnome { position: absolute; bottom: 4px; width: 52px; height: 68px; }
+.gnome svg { width: 100%; height: 100%; animation: gnome-bob .45s steps(4) infinite; }
+.gnome.g1 { animation: gnome-walk-r 26s linear infinite; }
+.gnome.g2 { animation: gnome-walk-l 34s linear infinite -8s; }
+.gnome.g2 svg { animation: gnome-bob .55s steps(4) infinite; transform: scaleX(-1); }
 rbutton:active,
 rbutton:focus {outline: none;}
 rbutton:hover {background-position: -20px -20px;}
@@ -92,6 +108,35 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 			<rbutton onclick="$('#ASRselect').hide(); $('#ASR').hide()">{{getString1(230)}}</rbutton>
 		</div>
 	</div>
+	<div id="gnomes" aria-hidden="true">
+		<div class="gnome g1"><svg viewBox="0 0 64 90"><use href="#gnome-sprite"/></svg></div>
+		<div class="gnome g2"><svg viewBox="0 0 64 90"><use href="#gnome-sprite"/></svg></div>
+	</div>
+	<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+		<symbol id="gnome-sprite" viewBox="0 0 64 90">
+			<ellipse cx="32" cy="86" rx="18" ry="3" fill="#000" opacity=".4"/>
+			<path d="M16 78 L24 82 L24 86 L14 86 Z" fill="#3a1d0b" stroke="#000" stroke-width="2"/>
+			<path d="M48 78 L40 82 L40 86 L50 86 Z" fill="#3a1d0b" stroke="#000" stroke-width="2"/>
+			<path d="M18 48 Q32 40 46 48 L44 78 L20 78 Z" fill="#2c7a2c" stroke="#000" stroke-width="2"/>
+			<rect x="20" y="66" width="24" height="5" fill="#5a2e0b" stroke="#000" stroke-width="1.5"/>
+			<rect x="30" y="66" width="4" height="5" fill="#ffd24a" stroke="#000" stroke-width="1"/>
+			<circle cx="32" cy="40" r="12" fill="#f7c89a" stroke="#000" stroke-width="2"/>
+			<path d="M20 40 Q32 64 44 40 Q40 52 32 54 Q24 52 20 40 Z" fill="#ffffff" stroke="#000" stroke-width="2"/>
+			<path d="M22 42 Q32 46 42 42" fill="none" stroke="#d0d0d0" stroke-width="1"/>
+			<ellipse cx="32" cy="42" rx="3.2" ry="2.6" fill="#e88b6a" stroke="#000" stroke-width="1.2"/>
+			<circle cx="27" cy="37" r="1.3" fill="#000"/>
+			<circle cx="37" cy="37" r="1.3" fill="#000"/>
+			<circle cx="24" cy="44" r="1.6" fill="#ff99aa" opacity=".8"/>
+			<circle cx="40" cy="44" r="1.6" fill="#ff99aa" opacity=".8"/>
+			<path d="M18 34 Q32 -2 46 34 Z" fill="#cc2222" stroke="#000" stroke-width="2"/>
+			<circle cx="46" cy="8" r="3" fill="#fff" stroke="#000" stroke-width="1.5"/>
+			<path d="M18 33 Q32 28 46 33" fill="none" stroke="#ffffff" stroke-width="1.4" opacity=".6"/>
+			<path d="M18 50 L10 64" stroke="#2c7a2c" stroke-width="6" stroke-linecap="round"/>
+			<path d="M46 50 L54 64" stroke="#2c7a2c" stroke-width="6" stroke-linecap="round"/>
+			<circle cx="10" cy="64" r="3" fill="#f7c89a" stroke="#000" stroke-width="1.5"/>
+			<circle cx="54" cy="64" r="3" fill="#f7c89a" stroke="#000" stroke-width="1.5"/>
+		</symbol>
+	</svg>
 	<div id="welcome" class="dark_overlay"></div>
 	<div id="welcomePanel" class="above_overlay" style="height: auto;">
 		<div class="box" style="max-height: 80vh; overflow: auto;">
