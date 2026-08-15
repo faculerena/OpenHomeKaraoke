@@ -137,6 +137,18 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 			<circle cx="54" cy="64" r="3" fill="#f7c89a" stroke="#000" stroke-width="1.5"/>
 		</symbol>
 	</svg>
+	<div id="adminLogin" class="dark_overlay"></div>
+	<div id="adminLoginPanel" class="above_overlay" style="height: auto;">
+		<div class="box">
+			<label>{{getString1(181)}}</label>
+			<input id="adminPw" class="input" type="password" style="margin-top: 0.4em;"
+			       onkeydown="if(event.key==='Enter') doAdminLogin();">
+			<div style="text-align: center; margin-top: 1em;">
+				<rbutton onclick="doAdminLogin()">OK</rbutton>
+				<rbutton onclick="$('#adminLogin, #adminLoginPanel').hide()">✕</rbutton>
+			</div>
+		</div>
+	</div>
 	<div id="welcome" class="dark_overlay"></div>
 	<div id="welcomePanel" class="above_overlay" style="height: auto;">
 		<div class="box" style="max-height: 80vh; overflow: auto;">
@@ -433,6 +445,21 @@ $('#current-user').click(function(e) {
 		closeNav();
 	}
 });
+
+// Admin login. The old link did get_refresh('/login'), which GETs the desktop login PAGE
+// over ajax, throws the HTML away and goes home — it never sends a password. Logging in
+// means POSTing to /auth, which is what sets the admin cookie.
+function openAdminLogin(){
+	$('#adminPw').val('');
+	$('#adminLogin, #adminLoginPanel').show();
+	$('#adminPw').focus();
+}
+function doAdminLogin(){
+	$.post('/auth', {'admin-password': $('#adminPw').val()}).always(function(){
+		$('#adminLogin, #adminLoginPanel').hide();
+		location.reload();          // re-render so the admin-only controls appear
+	});
+}
 
 // welcome / help popup — shown once per device, reopenable from the "?" in the navbar
 function openWelcome(){
