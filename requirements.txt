@@ -1,8 +1,14 @@
 # OpenHomeKaraoke — fully pinned environment (Linux + AMD ROCm GPU).
-# Reproduce with:  uv pip install -r requirements.txt   (into a Python 3.12 venv)
+# Reproduce with (into a Python 3.12 venv):
+#   uv venv --python 3.12 .venv
+#   uv pip install --index-strategy unsafe-best-match -r requirements.txt
 #
 # Notes:
 #   * torch is the ROCm build — resolved from the PyTorch ROCm index below.
+#   * --index-strategy unsafe-best-match is REQUIRED: uv's default (first-index)
+#     stops at the first index carrying a name, and the PyTorch index mirrors
+#     common packages (requests, numpy, ...) at older versions, so the pins here
+#     fail to resolve without it. Both indexes are first-party/trusted.
 #   * setuptools is held <81 on purpose: setuptools 81 dropped pkg_resources,
 #     which librosa 0.10.0 imports lazily (removing it crashes the vocal splitter).
 #   * The upstream 'futures' (py2-only) and 'spec_utils' (that's the local
