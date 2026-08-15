@@ -1,4 +1,5 @@
-import os, sys, io, random, time, json, datetime
+import os, sys, io, random, time, json, datetime, tempfile
+from urllib.parse import urlparse
 import logging, socket, subprocess, threading
 import multiprocessing as mp
 import shutil, psutil, traceback, tarfile, requests
@@ -125,7 +126,10 @@ class Karaoke:
 
 		logging.debug("IP address (for QR code and splash screen): " + self.ip)
 
-		self.url = "%s://%s:%s" % (('https' if self.ssl else 'http'), self.ip, self.port)
+		# --url wins (e.g. a public hostname served through a tunnel); otherwise use the LAN IP.
+		# NOTE: self.url may already be set from args via __dict__.update() above.
+		if not getattr(self, 'url', None):
+			self.url = "%s://%s:%s" % (('https' if self.ssl else 'http'), self.ip, self.port)
 
 		# get songs from download_path
 		self.get_available_songs()
@@ -343,7 +347,9 @@ class Karaoke:
 				self.screen.blit(text[0], self.normalize((qr_size + 35, blitY)))
 				# Windows and Mac-OS should use screen projection and AirPlay
 				if self.streamer_alive():
-					text = self.render_font(sysfont_size, getString(50) + self.url.rsplit(":", 1)[0] + ":4000", (255, 255, 255))
+					# --tv-url wins; the fallback swaps the port, which only works on a host:port URL
+					tv_url = getattr(self, 'tv_url', None) or (self.url.rsplit(":", 1)[0] + ":4000")
+					text = self.render_font(sysfont_size, getString(50) + tv_url, (255, 255, 255))
 					self.screen.blit(text[0], self.normalize((qr_size + 35, blitY - 40)))
 				if not self.firstSongStarted:
 					text = self.render_font(sysfont_size, getString(51), (255, 255, 255))
@@ -564,6 +570,8 @@ class Karaoke:
 		# downloaded song. Returns True if generation was kicked off (so callers can wait for it).
 		if not self.cloud or os.path.isfile(os.path.splitext(media_path)[0] + '.ass'):
 			return False
+		if urlparse(self.cloud).hostname not in ('localhost', '127.0.0.1', '::1', None):
+			return self._autogen_karaoke_remote(media_path)     # server can't see our disk
 		try:
 			requests.post(self.cloud + '/make_karaoke', data = {'path': media_path}, timeout = 5)
 			logging.info("Requested auto color-wipe for: " + os.path.basename(media_path))
@@ -571,6 +579,62 @@ class Karaoke:
 		except Exception as e:
 			logging.debug("Karaoke auto-gen request failed: " + str(e))
 			return False
+
+	def _autogen_karaoke_remote(self, media_path):
+		"""Split deployment (app here, GPU box elsewhere): upload the song's audio, then poll
+		for the color-wipe .ass and the vocal/nonvocal stems and drop them into our library.
+		Runs in a thread; the caller's wait-for-.ass loop picks the result up off the disk."""
+		def work():
+			tmp = tempfile.mkdtemp(prefix = 'ohk_up_')
+			try:
+				base = os.path.basename(media_path)
+				audio = os.path.join(tmp, base + '.m4a')
+				# audio only: ~1.5 MB for a 4-minute song, vs ~50 MB for the video
+				subprocess.call(['ffmpeg', '-y', '-v', 'error', '-i', media_path, '-vn', '-c', 'copy', audio])
+				if not os.path.isfile(audio):
+					return
+				with open(audio, 'rb') as f:
+					r = requests.post(self.cloud + '/make_karaoke',
+					                  files = {'file': f}, data = {'name': base}, timeout = 180)
+				job = r.json().get('job') if r.status_code == 200 else None
+				if not job:
+					return
+				for _ in range(600):              # GPU-bound, and queued behind other songs
+					time.sleep(2)
+					g = requests.get(f'{self.cloud}/karaoke_result/{job}', timeout = 60)
+					if g.status_code == 202:
+						continue
+					if g.status_code != 200:
+						return logging.info("Remote karaoke failed for: " + base)
+					open(f'{tmp}/out.tar.gz', 'wb').write(g.content)
+					self._unpack_karaoke(f'{tmp}/out.tar.gz', media_path)
+					return logging.info("Remote color-wipe ready for: " + base)
+			except Exception as e:
+				logging.debug("Remote karaoke generation failed: " + str(e))
+			finally:
+				shutil.rmtree(tmp, ignore_errors = True)
+
+		threading.Thread(target = work, daemon = True).start()
+		logging.info("Uploading for remote color-wipe: " + os.path.basename(media_path))
+		return True
+
+	def _unpack_karaoke(self, targz, media_path):
+		"""Install a remote job's results into our library."""
+		base = os.path.basename(media_path)
+		d = os.path.dirname(media_path) or '.'
+		with tarfile.open(targz) as tar:
+			names = tar.getnames()
+			for stem in ('vocal', 'nonvocal'):
+				if f'{stem}.m4a' in names:
+					sd = f'{self.download_path}{stem}'
+					os.makedirs(sd, exist_ok = True)
+					tar.extract(f'{stem}.m4a', sd)
+					os.replace(f'{sd}/{stem}.m4a', f'{sd}/{base}.m4a')
+			if 'karaoke.ass' in names:
+				# extract beside the media, then rename: the enqueue loop polls for this file,
+				# so it must appear complete (same filesystem => atomic replace)
+				tar.extract('karaoke.ass', d)
+				os.replace(f'{d}/karaoke.ass', os.path.splitext(media_path)[0] + '.ass')
 
 	def _download_karamugen(self, song_url, client_lang, client_ip, enqueue, song_added_by):
 		# Pull a ready-made karaoke (media + hand-timed color-wipe .ass) from Karaoke Mugen.

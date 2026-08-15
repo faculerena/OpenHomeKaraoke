@@ -1031,6 +1031,19 @@ if __name__ == "__main__":
 		default = default_dl_dir,
 	)
 	parser.add_argument(
+		"--url",
+		help = "Public URL to advertise on the splash screen and in the QR code, e.g. "
+		       "https://karaoke.example.com when serving through a tunnel. "
+		       "(default: http://<detected-lan-ip>:<port>)",
+		default = None,
+	)
+	parser.add_argument(
+		"--tv-url",
+		help = "URL of the TV/stream page shown on the splash screen. Only needed alongside "
+		       "--url, whose host has no port to swap. (default: the --url host on port 4000)",
+		default = None,
+	)
+	parser.add_argument(
 		"-sd", "--save-delays",
 		help = f"Filename for saving subtitle/audio/etc. delays for each song, can be: 1. auto(default): if <download-path>/.delays exist, then enable; 2. yes: save; 3. no: do not save; 4. <filename>: specific file for storing the delays",
 		default = 'auto',
