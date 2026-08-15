@@ -105,8 +105,10 @@ def ffm_wav2m4a(input_fn, output_fn, br = '128k'):
 
 def ffm_video2wav(input_fn, output_fn):
 	# The built-in DNN model is trained on 44100 sampling rate, it can still run but does not work on other sampling rates
+	# 'file:' prefix: ffmpeg reads a leading "word:" as a PROTOCOL, so a song called
+	# "EPIC: The Musical ..." fails with "Protocol not found" unless the path is qualified.
 	input_fn, output_fn = [fn.replace('"', '\\"') for fn in [input_fn, output_fn]]
-	subprocess.run(['ffmpeg', '-y', '-i', input_fn, '-f', 'wav', '-ar', '44100', output_fn])
+	subprocess.run(['ffmpeg', '-y', '-i', 'file:' + input_fn, '-f', 'wav', '-ar', '44100', output_fn])
 
 
 def split_vocal_by_stereo(in_wav, out_wav_nonvocal, out_wav_vocal):

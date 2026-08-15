@@ -187,7 +187,11 @@ class Karaoke:
 					bn, dn = os.path.basename(fn), os.path.dirname(fn)
 					if os.path.isfile(f'{self.download_path}nonvocal/{bn}.m4a') and os.path.isfile(f'{self.download_path}vocal/{bn}.m4a'):
 						continue
-					os.system(f'ffmpeg -y -i "{fn}" -vn -c copy {self.tmp_dir}/input.m4a')
+					# file: — a ':' in the song name is otherwise read as an ffmpeg protocol.
+					# matroska — YouTube audio is usually opus, which CANNOT be copied into an
+					# .m4a ("Could not find tag for codec opus"), so this silently produced
+					# nothing and the song never got its stems. The server probes by content.
+					os.system(f'ffmpeg -y -v error -i "file:{fn}" -vn -c copy -f matroska "{self.tmp_dir}/input.m4a"')
 					with open(f'{self.tmp_dir}/input.m4a', 'rb') as f:
 						r = requests.post(self.cloud+'/split_vocal', files={'file': f})
 					with open(f'{self.tmp_dir}/output.tar.gz', 'wb') as f:
@@ -590,7 +594,8 @@ class Karaoke:
 				base = os.path.basename(media_path)
 				audio = os.path.join(tmp, base + '.m4a')
 				# audio only: ~1.5 MB for a 4-minute song, vs ~50 MB for the video
-				subprocess.call(['ffmpeg', '-y', '-v', 'error', '-i', media_path, '-vn', '-c', 'copy', audio])
+				subprocess.call(['ffmpeg', '-y', '-v', 'error', '-i', 'file:' + media_path,
+				                 '-vn', '-c', 'copy', '-f', 'matroska', audio])
 				if not os.path.isfile(audio):
 					return
 				with open(audio, 'rb') as f:
@@ -1274,7 +1279,7 @@ class Karaoke:
 			vol_fsize_md5 = self.song2vol.get(basename, [0]*3)
 			if fsize == vol_fsize_md5[1] and md5 == vol_fsize_md5[2]:
 				return vol_fsize_md5[0]
-			pcm_data = subprocess.check_output(['ffmpeg', '-i', filename, '-vn', '-f', 's16le', '-acodec', 'pcm_s16le', '-'], stderr = subprocess.DEVNULL)
+			pcm_data = subprocess.check_output(['ffmpeg', '-i', 'file:' + filename, '-vn', '-f', 's16le', '-acodec', 'pcm_s16le', '-'], stderr = subprocess.DEVNULL)
 			volume_val = np.clip(np.sqrt(np.std(np.frombuffer(pcm_data, dtype = np.int16))/STD_VOL), 1/16, 16)
 			self.song2vol[basename] = [volume_val, fsize, md5]
 			with Open(self.download_path+'/.mp3_volume.json.gz', 'wb') as fp:
