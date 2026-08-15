@@ -69,7 +69,9 @@ color:#fff;font:600 5vw sans-serif;background:rgba(0,0,0,.55);cursor:pointer}</s
 var v=document.getElementById('v'),tap=document.getElementById('tap'),url='index.m3u8';
 function start(){
   if(window.Hls&&Hls.isSupported()){
-    var hls=new Hls({lowLatencyMode:true,liveSyncDurationCount:2,maxBufferLength:6,backBufferLength:6});
+    // sit 1 segment (~0.5s) behind the live edge instead of 2, and re-sync if we drift back
+    var hls=new Hls({lowLatencyMode:true,liveSyncDurationCount:1,liveMaxLatencyDurationCount:6,
+                     maxBufferLength:4,backBufferLength:4});
     hls.loadSource(url);hls.attachMedia(v);
     hls.on(Hls.Events.ERROR,function(e,d){if(d.fatal){setTimeout(function(){try{hls.loadSource(url);hls.startLoad();}catch(_){}},1000);}});
   }else{v.src=url;}
@@ -85,13 +87,21 @@ trap 'cleanup; exit 0' INT TERM
 trap cleanup EXIT
 
 echo "Capturing $OUTDESC with audio '$AUDIO'"
-# 30fps, 1s keyframes, no B-frames, MPEG-TS (no Matroska cluster buffering)
-wf-recorder "${WFOUT[@]}" -c h264_vaapi -d /dev/dri/renderD128 -r 30 -p g=30 -p bf=0 \
+# Latency budget: a segment can only be published once it is COMPLETE, and the player then
+# sits liveSyncDurationCount segments behind the edge. So end-to-end delay scales with
+# SEGMENT length — 0.5s segments with a matching 0.5s keyframe interval (g=15 @30fps) roughly
+# halve it versus 1s. Every segment must start on a keyframe, so g MUST match hls_time.
+SEG_SEC=0.6
+wf-recorder "${WFOUT[@]}" -c h264_vaapi -d /dev/dri/renderD128 -r 30 -p g=15 -p bf=0 \
 	--audio="$AUDIO" -C aac -m mpegts -f "$FIFO" 2>"$D/wf.log" &
 WF=$!
-# fast TS probe (-analyzeduration/-probesize) so ffmpeg opens immediately instead of analyzing ~5s
-ffmpeg -hide_banner -loglevel error -analyzeduration 500000 -probesize 200000 -fflags +genpts -i "$FIFO" -c copy \
-	-f hls -hls_time 1 -hls_list_size 4 -hls_flags delete_segments+independent_segments+omit_endlist \
+# fast TS probe (-analyzeduration/-probesize) so ffmpeg opens immediately instead of analyzing ~5s;
+# nobuffer/low_delay stop it holding frames back. temp_file matters at this segment size: without
+# it the HTTP server can hand the player a half-written .ts, which stalls playback.
+ffmpeg -hide_banner -loglevel error -analyzeduration 500000 -probesize 200000 \
+	-fflags +genpts+nobuffer -flags low_delay -i "$FIFO" -c copy \
+	-f hls -hls_time "$SEG_SEC" -hls_list_size 6 \
+	-hls_flags delete_segments+independent_segments+omit_endlist+temp_file \
 	-hls_segment_type mpegts -hls_segment_filename "$D/seg_%05d.ts" "$D/index.m3u8" 2>"$D/ff.log" &
 FF=$!
 python3 -m http.server "$PORT" --bind 0.0.0.0 --directory "$D" >/dev/null 2>&1 &
