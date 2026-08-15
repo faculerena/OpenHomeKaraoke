@@ -92,6 +92,24 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 			<rbutton onclick="$('#ASRselect').hide(); $('#ASR').hide()">{{getString1(230)}}</rbutton>
 		</div>
 	</div>
+	<div id="welcome" class="dark_overlay"></div>
+	<div id="welcomePanel" class="above_overlay" style="height: auto;">
+		<div class="box" style="max-height: 80vh; overflow: auto;">
+			<h1 style="font-size: x-large; font-weight: bold; text-align: center; margin-bottom: 0.6em;">🎂 MEGACUMPLEAÑOS!! 🎂</h1>
+			<ul style="list-style: disc; margin-left: 1.1em; line-height: 1.5;">
+				<li>Agreguen canciones en la lupita o en la carpeta si ya están descargadas.</li>
+				<li>Prioricen que las canciones sean de <b>KARAOKE MUGEN</b> (🎤) o que sean versiones <b>Karaoke</b> (🎵).</li>
+				<li>No pausen canciones de otros.</li>
+				<li>Pueden tocar <b>MUSIC | MIXED | VOICE</b> para sacarle la voz a alguna canción.</li>
+				<li>Díganle feliz cumple a Mega 🥳</li>
+			</ul>
+			<label style="display: block; margin-top: 1em;">Tu nombre:</label>
+			<input id="welcomeName" class="input" type="text" style="margin-top: 0.3em;">
+			<div style="text-align: center; margin-top: 1em;">
+				<rbutton onclick="closeWelcome()">OK</rbutton>
+			</div>
+		</div>
+	</div>
 	<nav class="navbar" role="navigation" aria-label="main navigation" style="position: fixed; top:0; width: 100%; overflow: hidden;">
 		<div class="navbar-brand" id="brand" style="padding-left: 10px">
 			<a id="home" class="navbar-item" onclick="switch_pane('/f_home')">
@@ -113,6 +131,10 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 			<a id="speak" class="navbar-item" style="margin-left: auto;" onclick="ASR()">
 				<i class="icon" title="{{getString1(212)}}">🗣</i>
 				<span>{{getString1(212)}}</span>
+			</a>
+			<a id="help" class="navbar-item" href="#">
+				<i class="icon" title="Info" style="font-weight: bold;">?</i>
+				<span>Info</span>
 			</a>
 			<a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
 				<span aria-hidden="true"></span>
@@ -367,8 +389,27 @@ $('#current-user').click(function(e) {
 	}
 });
 
+// welcome / help popup — shown once per device, reopenable from the "?" in the navbar
+function openWelcome(){
+	currentUser = Cookies.get("user") || currentUser || "";
+	$('#welcomeName').val(currentUser);
+	$('#welcome, #welcomePanel').show();
+}
+function closeWelcome(){
+	var n = ($('#welcomeName').val() || "").trim();
+	if(n && n !== currentUser){
+		if(currentUser) $.get(`/user_rename/${encodeURIComponent(currentUser)}/${encodeURIComponent(n)}`);
+		set_user(n);
+	}
+	Cookies.set("seen_welcome", "1", { expires: 3650 });
+	$('#welcome, #welcomePanel').hide();
+}
+$('#help').click(function(e){ e.preventDefault(); closeNav(); openWelcome(); });
+
 // handle browser language
 load_cur_user();
+// first visit: let load_cur_user()'s /auto_username settle so the field is pre-filled
+if(!Cookies.get("seen_welcome")) setTimeout(openWelcome, 600);
 var currentLang = Cookies.get("lang");
 if(!currentLang){
 	currentLang = window.navigator.language;
