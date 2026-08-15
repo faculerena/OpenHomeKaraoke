@@ -35,7 +35,18 @@ else
 	[ -z "$OUTPUT" ] && OUTPUT="DP-2"
 	WFOUT=(-o "$OUTPUT"); OUTDESC="$OUTPUT"
 fi
-[ -z "$AUDIO" ]  && AUDIO="$(pactl get-default-sink 2>/dev/null).monitor"
+# Audio source. Prefer the karaoke's OWN sink when it exists (_headless.sh creates it and
+# points app.py/VLC at it). Capturing the *default* sink's monitor is a feedback trap: a
+# browser playing this very stream renders to that same sink, so its output gets re-captured
+# and folded back in every ~2s, stacking the song on top of itself.
+OHK_SINK="${OHK_SINK:-ohk_karaoke}"
+if [ -z "$AUDIO" ]; then
+	if pactl list short sinks 2>/dev/null | awk '{print $2}' | grep -qx "$OHK_SINK"; then
+		AUDIO="$OHK_SINK.monitor"
+	else
+		AUDIO="$(pactl get-default-sink 2>/dev/null).monitor"
+	fi
+fi
 IP="$(ip -4 addr show scope global 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1 | head -1)"
 
 D="$(mktemp -d /tmp/ohk-tvstream.XXXXXX)"
