@@ -1249,6 +1249,20 @@ class Karaoke:
 			return
 		os.system(f"sleep {delay} && tmux send-keys -t PiKaraoke:0.3 C-c")
 
+	def vocal_coverage(self):
+		"""(songs with BOTH stems, total songs). Both are needed before the
+		MUSIC | MIXED | VOICE toggle lights up for a song."""
+		try:
+			n = 0
+			for f in self.available_songs:
+				bn = os.path.basename(f)
+				if os.path.isfile(f'{self.download_path}nonvocal/{bn}.m4a') \
+				   and os.path.isfile(f'{self.download_path}vocal/{bn}.m4a'):
+					n += 1
+			return n, len(self.available_songs)
+		except:
+			return 0, 0
+
 	def vocal_alive(self):
 		try:
 			return bool(self.vocal_process and self.vocal_process.is_alive())\

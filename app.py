@@ -746,6 +746,17 @@ def info():
 	vocal_extra = ''
 	if vocalsplitter:
 		vocal_extra = getString2(30) if K.vocal_device == 'cpu' else getString2(31)
+	elif args.cloud:
+		# Splitting runs inside the --cloud server, so there is no local process to find and
+		# the plain alive-check reads "Stopped" while it is working perfectly. Ask the server
+		# whether it is up, and report how much of the library actually has its stems.
+		done, total = K.vocal_coverage()
+		try:
+			requests.get(args.cloud, timeout = 1)      # any reply (404 included) means it is up
+			vocalsplitter = True
+		except Exception:
+			vocalsplitter = False
+		vocal_extra = f' — cloud, {done}/{total} songs ready'
 
 	# youtube-dl
 	youtubedl_version = K.youtubedl_version
@@ -802,6 +813,17 @@ def f_info():
 	vocal_extra = ''
 	if vocalsplitter:
 		vocal_extra = getString2(30) if K.vocal_device == 'cpu' else getString2(31)
+	elif args.cloud:
+		# Splitting runs inside the --cloud server, so there is no local process to find and
+		# the plain alive-check reads "Stopped" while it is working perfectly. Ask the server
+		# whether it is up, and report how much of the library actually has its stems.
+		done, total = K.vocal_coverage()
+		try:
+			requests.get(args.cloud, timeout = 1)      # any reply (404 included) means it is up
+			vocalsplitter = True
+		except Exception:
+			vocalsplitter = False
+		vocal_extra = f' — cloud, {done}/{total} songs ready'
 
 	# youtube-dl
 	youtubedl_version = K.youtubedl_version
