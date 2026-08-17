@@ -57,6 +57,61 @@ This _should_ work on Windows, Linux machines and all Raspberry Pi devices (mult
 
 ## Installation
 
+### Quick start (this fork, Linux desktop with a GPU)
+
+This fork ships its own GPU server and launcher, so you do **not** need Anaconda or the
+external OpenSmartLight `cloud` folder that the generic instructions below mention.
+
+```bash
+git clone <this repo> && cd OpenHomeKaraoke
+uv venv --python 3.12 .venv
+uv pip install --index-strategy unsafe-best-match -r requirements.txt
+mkdir -p ~/pikaraoke-songs/vocal ~/pikaraoke-songs/nonvocal    # required, see Troubleshooting
+./start-karaoke.sh
+```
+
+Without `uv`, plain pip works too and needs no extra flag, because it already resolves
+across every index in the file:
+
+```bash
+python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+
+Then open the URL shown on the splash screen (or scan its QR code) from a phone on the
+same network.
+
+Three things that will bite you otherwise:
+
+- **With `uv`, `--index-strategy unsafe-best-match` is required.** `requirements.txt` pulls
+  torch from the PyTorch index, and uv's default stops at the first index that carries a
+  given package name. That index also mirrors `requests`, `numpy` and others at older
+  versions, so without the flag the pinned versions simply fail to resolve.
+- **`requirements.txt` is pinned to an AMD ROCm build of torch** (`torch==2.9.1+rocm6.3`,
+  `torchaudio`, `pytorch-triton-rocm`). On NVIDIA or CPU-only machines, replace those three
+  lines and the `--extra-index-url` header with the build for your platform from
+  https://pytorch.org/ — otherwise everything installs but the GPU is never used.
+- **`setuptools` is held below 81 on purpose.** 81 removed `pkg_resources`, which
+  `librosa==0.10.0` imports lazily; without the pin the vocal splitter dies mid-run.
+
+`run.sh` is the upstream launcher and is **not** the one to use here: it calls the system
+`python3` (not the venv) and `pacmd`, which no longer exists on PipeWire systems.
+
+### What this fork adds
+
+| Script | What it does |
+| --- | --- |
+| `start-karaoke.sh` | One-command launcher. Runs the ASR/GPU server and the app in a tmux session named `OHK`. `-t` hides the app in a `cage` micro-compositor and streams it to a TV browser instead of using your monitor; `-c` also publishes it through a Cloudflare tunnel (requires `-a PASSWORD`); `-m` Whisper model, `-d` song dir, `-p` ASR port; `-q` / `-s` lighten the TV stream (encoder QP and scaled height, only meaningful with `-t`/`-c`). Stop everything with `tmux kill-session -t OHK`. Run `./start-karaoke.sh -h` for the current list. |
+| `asr_server.py` | The local GPU server, replacing the external OpenSmartLight `cloud`. Serves `/run_asr` (Whisper voice search), `/split_vocal` (vocal/instrumental separation) and `/make_karaoke` (color-wipe lyrics). Point the app at it with `--cloud http://localhost:5005`. Flags: `-p` port, `-m` model, `-g` GPU id (`-1` for CPU), `--host` bind address. **It has no authentication — never bind it to a public interface.** |
+| `stream-tv.sh` | Streams the karaoke to a TV's web browser over HLS, using `wf-recorder` on Wayland. Replaces the bundled `screencapture.sh`, which uses X11 `x11grab` and captures a black frame under Wayland. Needs a wlroots compositor, so it will not work on GNOME or KDE. |
+| `_headless.sh` | Runs the app inside `cage` on a headless output and streams that, leaving your real monitor free. Used by `start-karaoke.sh -t`. |
+| `presplit-vocals.sh` | Pre-generates the vocal/instrumental stems for the whole library. Worth running before a party: stems are otherwise only produced the first time a song is *played*, so a freshly added song's MUSIC / MIXED / VOICE toggle stays greyed out for its entire first play. Safe to re-run; it skips songs that already have stems. |
+| `make-karaoke.py` | Generates a word-level color-wipe `.ass` for a song, from real synced lyrics force-aligned to the isolated vocals. Runs automatically after a download when `--cloud` is set. |
+| `romanize_subs.py` | Turns a video's Japanese subtitle track into Hepburn romaji (`<basename>.romaji.srt`), which the player prefers over the embedded track. |
+
+Two app flags worth knowing that the generic argument list below predates: `--url` and
+`--tv-url` override the address shown on the splash screen and encoded in the QR code, for
+when the app is reached through a tunnel or reverse proxy rather than its LAN IP.
+
 ### For all OS
 
 - Install git, if you haven't already. (on Raspberry Pi: `sudo apt-get update; sudo apt-get install git`)
@@ -66,7 +121,11 @@ This _should_ work on Windows, Linux machines and all Raspberry Pi devices (mult
 - Create song download directory `$HOME/pikaraoke-songs` (by default) or specify it on the command line.
 - Create `nonvocal` and `vocal` sub-folders inside the song download directory to enable automatic extraction of instrumental and vocal tracks in the background, e.g.,`$HOME/pikaraoke-songs/nonvocal` and `$HOME/pikaraoke-songs/vocal` by default.
 - Make sure `VLC` (https://www.videolan.org/) and `ffmpeg` (https://ffmpeg.org/download.html) are installed, and their executables are in the execution PATH environment variable.
-- For GPU-accelerated speech recognition, you need to install the cloud-side server on any CUDA-enabled GPU machine. Copy over the entire `cloud` folder from https://github.com/xuancong84/OpenSmartLight/tree/main/tools/cloud, setup conda environment correctly and run the `cloud.py`, then pass the cloud server URL as argument to `app.py`.
+- For GPU-accelerated speech recognition, this fork ships its own server: run `asr_server.py`
+  and pass its URL to `app.py` with `--cloud` (see "What this fork adds" above). The original
+  instructions were to copy the `cloud` folder from
+  https://github.com/xuancong84/OpenSmartLight/tree/main/tools/cloud and run `cloud.py`;
+  `asr_server.py` implements the same endpoints locally and is what `start-karaoke.sh` uses.
 - GPU-accelerated vocal splitter can run either locally or via cloud (see previous point with option `-vs`). If your local machine is powerful enough, with a fast CPU and a decent NVidia GPU with >=8GB GPU memory, you can host the cloud on the same local machine.
 
 #### Linux / OSX / Raspberry Pi (>=4)
@@ -90,7 +149,12 @@ Note: if you have trouble installing pygame, there's apparently an incompatibili
 
 **On Linux/Mac-OS, run:**
 
-cd into the OpenHomeKaraoke directory and run: `PATH=~/anaconda3/bin:$PATH ./run.sh`
+For this fork use `./start-karaoke.sh` (see Quick start above), which brings up the GPU
+server and the app together in the venv.
+
+The upstream launcher is `PATH=~/anaconda3/bin:$PATH ./run.sh`. It assumes an Anaconda
+environment and uses `pacmd`, so it will not work on a venv-based install or on a PipeWire
+system.
 
 
 **On Raspberry Pi:**
@@ -210,6 +274,13 @@ Make sure you are connected to the same network/wifi. You can then enter the sho
 ### Both vocal/nonvocal options are greyed out permanently, cannot switch to vocal/instrumental mode
 
 The vocal/nonvocal play modes are only activated when both `vocal` and `nonvocal` folders exist inside the songs folder. So you need to manually create a `vocal` and `nonvocal` subfolders inside your songs directory.
+
+They are also per-song: the toggle only lights up once **both** `vocal/<file>.m4a` and
+`nonvocal/<file>.m4a` exist for the song being played. Those are generated in the background
+the first time a song is *played*, so a song you just added stays greyed out for the whole of
+its first play and works from the next one on. To avoid that during a party, run
+`./presplit-vocals.sh` once after everyone has finished adding songs — it generates the
+missing stems for the whole library and skips the ones already done.
 
 ### I'm not hearing audio out of the headphone jack
 
