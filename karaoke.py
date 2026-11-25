@@ -1,4 +1,4 @@
-import os, sys, io, random, time, json, datetime, tempfile, math
+import os, sys, io, random, re, time, json, datetime, tempfile, math
 from urllib.parse import urlparse
 import logging, socket, subprocess, threading
 import multiprocessing as mp
@@ -16,7 +16,7 @@ import arabic_reshaper
 from bidi.algorithm import get_display
 from unidecode import unidecode
 from flask import request
-from lib import omxclient, vlcclient
+from lib import omxclient, vlcclient, tv_skins
 from lib.get_platform import *
 from lib.NLP import *
 from app import getString
@@ -88,12 +88,6 @@ class Karaoke:
 	base_path = os.path.dirname(__file__)
 	volume_offset = 0
 	default_logo_path = os.path.join(base_path, "logo.jpg")
-	# TV splash: the "Radio de living" palette and type (DESIGN.md), same as the phones and the panel
-	C_WALNUT, C_CAB, C_LINE = (29, 20, 16), (38, 26, 19), (74, 51, 38)
-	C_PRINT, C_DIM, C_FAINT = (241, 227, 196), (196, 173, 142), (160, 138, 109)
-	C_AMBER, C_NEEDLE, C_EYE = (242, 181, 68), (217, 71, 47), (111, 195, 159)
-	SINGER_COLORS = ['#9fd0f0', '#e9a6c9', '#b9d98a', '#f0a77a', '#c6b3f5', '#8fd6c8', '#f5d77a', '#f28b82']
-	splash_fonts_dir = os.path.join(base_path, "static", "fonts")
 	logical_volume = None   # for normalized volume
 	status_dirty = True
 	event_dirty = threading.Event()
@@ -336,244 +330,144 @@ class Karaoke:
 		return v*r
 
 	def render_splash_screen(self):
-		"""The TV between songs. Tonight's name, or the song coming up; a tuning dial with the queue
-		on it as stations; and how to join (QR + URL). Static on purpose: the TV stream stays cheap."""
+		"""The TV between songs, drawn by the skin picked in the panel (lib/tv_skins.py)."""
 		if self.hide_splash_screen:
 			return
-		# the run loop calls this on every pass: redraw only when something on it changed
+		skin, title = self.tv_settings()
 		playing = (not self.has_video) and self.now_playing
-		key = (self.screen.get_size(), playing and (self.now_playing, self.now_playing_user),
-				tuple((q.get('title'), q.get('user')) for q in self.queue), self.firstSongStarted,
-				len(self.available_songs), self.url, getattr(self, 'tv_url', None), self.hide_ip,
-				self.streamer_alive() if not self.hide_ip else None, self.party_title())
-		if key == getattr(self, '_splash_key', None) and self.is_network_connected():
+		connected = self.hide_ip or self.is_network_connected()
+		tv_url = None
+		if not self.hide_ip and self.streamer_alive():
+			# --tv-url wins; the fallback swaps the port, which only works on a host:port URL
+			tv_url = getattr(self, 'tv_url', None) or (self.url.rsplit(":", 1)[0] + ":4000")
+		queue = [(q.get('title'), q.get('user')) for q in self.queue]
+		# the run loop calls this on every pass: redraw only when something on it changed
+		key = (self.screen.get_size(), skin, title, os.lang if hasattr(os, 'lang') else None,
+				playing and (self.now_playing, self.now_playing_user), tuple(queue),
+				None if self.hide_ip else self.url, tv_url, connected)
+		if key == getattr(self, '_splash_key', None):
 			self.screen.blit(self._splash_frame, (0, 0))
 			return
-		self.draw_splash_screen()
+		logging.debug("Rendering splash screen")
+		if not connected:
+			self.screen.fill((0, 0, 0))
+			tv_skins.Ink(self.screen).draw(getString(48), 'semi', 40, (255, 255, 255),
+					self.screen.get_rect().center, 'center')
+			pygame.display.update()
+			time.sleep(10)
+			logging.info("No IP found. Network/Wifi configuration required. For wifi config, try: sudo raspi-config or the desktop GUI: startx")
+			self.stop()
+			return
+		if not self.hide_ip and not hasattr(self, 'p_image'):
+			self.p_image = pygame.image.load(self.qr_code_path)
+		if playing:
+			state, song, singer, later = 'playing', self.now_playing, self.now_playing_user, queue
+		elif queue:
+			state, (song, singer), later = 'next', queue[0], queue[1:]
+		else:
+			state, song, singer, later = 'idle', None, None, []
+		tr = self.tr
+		view = tv_skins.View(
+			title = title, state = state, song = song, singer = singer, later = later,
+			url = None if self.hide_ip else self.url, tv_url = tv_url,
+			qr = None if self.hide_ip else self.p_image,
+			T = {'upnext': tr(241), 'later': tr(242), 'sings': tr(243), 'scan': tr(244), 'playing': tr(245)})
+		tv_skins.draw(self.screen, skin, view)
 		self._splash_key, self._splash_frame = key, self.screen.copy()
 
-	def draw_splash_screen(self):
-		logging.debug("Rendering splash screen")
-		W, H = self.screen.get_size()
-		r = W / self.ref_W
-		M = 120 * r     # side margin
-		self.screen.blit(self.splash_backdrop(), (0, 0))
+	def tr(self, ii):
+		"""A string of the TV's language, falling back to English when it has no translation."""
+		return getString(ii) or getattr(os, 'langs', {}).get('en_US', {}).get(ii, '')
 
-		# top: the wordmark (or a custom --logo-path) and the library size
-		if self.logo_path != self.default_logo_path:
-			if not hasattr(self, 'logo'):
-				self.logo = pygame.image.load(self.logo_path)
-			lh = 72 * r
-			lw = self.logo.get_width() * lh / self.logo.get_height()
-			self.screen.blit(pygame.transform.smoothscale(self.logo, (round(lw), round(lh))), (M, 40 * r))
-		else:
-			pygame.draw.circle(self.screen, self.C_EYE, (M + 7 * r, 76 * r), 7 * r)
-			self.splash_text(getString(136).upper(), 26, self.C_DIM, (M + 28 * r, 76 * r), track=4, anchor='midleft')
-		if not self.firstSongStarted:
-			self.splash_text(f"{getString(197)}: {len(self.available_songs)}", 24, self.C_FAINT,
-					(W - M, 76 * r), face='barlow-500', anchor='midright')
+	def update_tv_bar(self):
+		"""The scrolling bar on the TV stream while a video song plays: what's next and where to
+		join. stream-tv.sh draws it from two files in $OHK_TV_BAR (set by _headless.sh), one for
+		a bar at the top and one at the bottom; the one not in use stays empty. The bar goes on
+		top, unless this song's lyrics sit at the top (Karaoke Mugen's): then at the bottom."""
+		d = os.environ.get('OHK_TV_BAR')
+		if not d or not os.path.isdir(d):
+			return
+		now = time.time()
+		if now - getattr(self, '_bar_t', 0) < 0.5:
+			return
+		self._bar_t = now
+		text, pos = '', 'top'
+		if self.is_file_playing() and self.has_video:
+			parts = []
+			if self.queue:
+				q = self.queue[0]
+				parts.append(f"{self.tr(241)}: {q.get('title')} · {q.get('user')}")
+			if not self.hide_ip and self.url:
+				parts.append(f"{self.tr(244)}: {self.url.split('://')[-1]}")
+			sep = '      •      '
+			text = sep.join(parts) + sep if parts else ''
+			if self.lyrics_on_top(self.now_playing_filename):
+				pos = 'bottom'
+		if (text, pos) == getattr(self, '_bar_state', None):
+			return
+		self._bar_state = (text, pos)
+		for p in ('top', 'bottom'):
+			path = os.path.join(d, p + '.txt')
+			try:
+				with open(path + '.tmp', 'w', encoding = 'utf-8') as f:
+					f.write(text if p == pos else '')
+				os.replace(path + '.tmp', path)     # ffmpeg re-reads it twice a second: never half-written
+			except OSError as e:
+				logging.warning(f"TV bar: {e}")
 
-		# the headline: what is playing (audio-only songs show this screen), what is next, or the party
-		playing = (not self.has_video) and self.now_playing
-		nxt = self.queue[0] if len(self.queue) else None
-		if playing:
-			kicker, title, singer = getString(58), self.now_playing, self.now_playing_user
-		elif nxt:
-			kicker, title, singer = getString(56), nxt['title'], nxt['user']
-		else:
-			kicker, title, singer = None, self.party_title(), None
-		dial_y = H - 420 * r
-		size, lines = self.splash_fit(title, [124, 108, 92, 78, 66], W - 2 * M, 2)
-		def headline(y, draw):
-			top = y
-			if kicker:
-				y = self.splash_text(kicker.strip().rstrip(':').upper(), 30, self.C_AMBER, (M, y), track=3, draw=draw).bottom + 4 * r
-			for L in lines:
-				y = self.splash_text(L, size, self.C_PRINT, (M, y), max_w=W - 2 * M, draw=draw).bottom - size * 0.12 * r
-			if singer:
-				c = self.singer_color(singer)
-				rect = self.splash_text(singer, 44, c, (M + 34 * r, y + 10 * r), face='barlow-500', max_w=W - 2 * M - 34 * r, draw=draw)
-				if draw:
-					pygame.draw.circle(self.screen, c, (M + 10 * r, rect.centery), 10 * r)
-				y = rect.bottom
-			if playing and nxt:
-				y = self.splash_text(f"{getString(56).strip().rstrip(':')}: {nxt['title']}  ·  {nxt['user']}", 30, self.C_DIM,
-						(M, y + 18 * r), face='barlow-500', max_w=W - 2 * M, draw=draw).bottom
-			return y - top
-		band_top, band_bottom = 120 * r, dial_y - 40 * r
-		headline(band_top + max(0, (band_bottom - band_top - headline(0, False)) / 2), True)
-
-		# the dial: tonight's singers as stations, the needle on whoever is up
-		stations = [u for u in ([self.now_playing_user] if playing else []) + [q.get('user') for q in self.queue] if u]
-		self.splash_dial(M, dial_y, W - 2 * M, 104 * r, stations)
-
-		# bottom: how to join
-		if not self.hide_ip:
-			if not hasattr(self, 'p_image'):
-				self.p_image = pygame.image.load(self.qr_code_path)
-			# whole pixels per module, so the code stays crisp and scannable
-			qr, pad = max(1, round(196 * r / self.p_image.get_width())) * self.p_image.get_width(), 16 * r
-			plate = pygame.Rect(M, H - 60 * r - qr - 2 * pad, qr + 2 * pad, qr + 2 * pad)
-			# the light plate is the code's quiet zone, so it scans off the dark screen
-			pygame.draw.rect(self.screen, (251, 243, 226), plate, border_radius=round(12 * r))
-			self.screen.blit(pygame.transform.scale(self.p_image, (round(qr), round(qr))), (plate.x + pad, plate.y + pad))
-			tx = plate.right + 44 * r
-			if not self.is_network_connected():
-				self.splash_text(getString(48), 34, self.C_PRINT, (tx, plate.centery), face='barlow-500', anchor='midleft')
-				pygame.display.update()
-				time.sleep(10)
-				logging.info("No IP found. Network/Wifi configuration required. For wifi config, try: sudo raspi-config or the desktop GUI: startx")
-				self.stop()
-			else:
-				max_w = W - M - tx
-				y = self.splash_text(getString(49).strip(), 30, self.C_DIM, (tx, plate.top + 14 * r), face='barlow-500', max_w=max_w).bottom
-				y = self.splash_text(self.url, 64, self.C_PRINT, (tx, y + 2 * r), max_w=max_w).bottom
-				# Windows and Mac-OS should use screen projection and AirPlay
-				if self.streamer_alive():
-					# --tv-url wins; the fallback swaps the port, which only works on a host:port URL
-					tv_url = getattr(self, 'tv_url', None) or (self.url.rsplit(":", 1)[0] + ":4000")
-					self.splash_text(self.label(50) + tv_url, 26, self.C_FAINT, (tx, y + 12 * r), face='barlow-500', max_w=max_w)
-		if not self.firstSongStarted:
-			self.splash_text(getString(51), 22, self.C_FAINT, (W - M, H - 60 * r - 30 * r), face='barlow-500', anchor='bottomright')
-			self.splash_text(getString(52), 22, self.C_FAINT, (W - M, H - 60 * r), face='barlow-500', anchor='bottomright')
-
-	def splash_dial(self, x0, y0, w, h, stations):
-		"""The tuning scale from the panel and the phones, drawn on the TV."""
-		r = self.screen.get_width() / self.ref_W
-		glass = pygame.Rect(round(x0), round(y0), round(w), round(h))
-		pygame.draw.rect(self.screen, self.C_CAB, glass, border_radius=round(10 * r))
-		pygame.draw.rect(self.screen, self.C_LINE, glass, width=max(1, round(2 * r)), border_radius=round(10 * r))
-		step, top = 24 * r, y0 + 14 * r
-		for i in range(int((w - 40 * r) // step) + 1):
-			x = x0 + 20 * r + i * step
-			major = i % 5 == 0
-			pygame.draw.line(self.screen, self.C_FAINT if major else self.C_LINE, (x, top), (x, top + (26 if major else 12) * r), max(1, round(2 * r)))
-		needle = x0 + w * 0.18
-		gap = 250 * r
-		for i, who in enumerate(stations):
-			x = needle + i * gap
-			if x > x0 + w - 60 * r:
+	def lyrics_on_top(self, media):
+		"""Whether most of this song's lyric lines (its .ass sidecar) sit at the top of the
+		screen. Cached per file."""
+		cache = self.__dict__.setdefault('_lyrics_top', {})
+		if not media:
+			return False
+		if media not in cache:
+			cache[media] = False
+			stem = os.path.splitext(media)[0]
+			for ext in ('.ass', '.ssa'):
+				try:
+					with open(stem + ext, encoding = 'utf-8', errors = 'ignore') as f:
+						lines = f.read().splitlines()
+				except OSError:
+					continue
+				fmt, styles, top, total = None, {}, 0, 0
+				for L in lines:
+					if L.startswith('Format:') and fmt is None and 'Alignment' in L:
+						fmt = [x.strip() for x in L[7:].split(',')]
+					elif L.startswith('Style:') and fmt:
+						v = [x.strip() for x in L[6:].split(',')]
+						if len(v) == len(fmt):
+							styles[v[fmt.index('Name')]] = v[fmt.index('Alignment')]
+					elif L.startswith('Dialogue:'):
+						v = L[9:].split(',', 9)
+						if len(v) < 10:
+							continue
+						align = styles.get(v[3].strip(), '2')
+						m = re.search(r'\\an(\d)', v[9])
+						if m:
+							align = m.group(1)
+						total += 1
+						top += align in ('7', '8', '9')
+				cache[media] = total > 0 and top / total > 0.3
 				break
-			c = self.singer_color(who)
-			pygame.draw.rect(self.screen, c, pygame.Rect(round(x - 3 * r), round(top), max(2, round(6 * r)), round(36 * r)))
-			self.splash_text(who, 26, c, (x + 14 * r, y0 + h - 12 * r), face='barlowcondensed-500', anchor='bottomleft', max_w=gap - 40 * r)
-		# the needle overhangs the glass, like the real thing
-		pygame.draw.line(self.screen, self.C_NEEDLE, (needle, y0 - 16 * r), (needle, y0 + h + 10 * r), max(2, round(4 * r)))
-		pygame.draw.circle(self.screen, self.C_NEEDLE, (needle, y0 - 16 * r), 7 * r)
+		return cache[media]
 
-	def splash_backdrop(self):
-		"""Walnut, warmed by a lamp up and to the right, darker at the edges. A little grain keeps the
-		stream's encoder from banding the gradient. Built once per screen size."""
-		size = self.screen.get_size()
-		if getattr(self, '_backdrop_size', None) != size:
-			W, H = size
-			y, x = np.mgrid[0:H, 0:W].astype(np.float32)
-			glow = np.clip(1 - np.hypot(x / W - 0.70, (y / H - 0.28) * H / W) / 0.8, 0, 1) ** 2
-			vignette = np.clip(np.hypot(x / W - 0.5, y / H - 0.5) - 0.4, 0, 1) * 1.6
-			base = np.array(self.C_WALNUT, np.float32)
-			img = base * (1 - vignette[..., None]) + glow[..., None] * np.array([34, 19, 8], np.float32)
-			img += np.random.default_rng(1).normal(0, 1.3, (H, W, 1)).astype(np.float32)
-			arr = np.clip(img, 0, 255).astype(np.uint8)
-			self._backdrop = pygame.surfarray.make_surface(arr.swapaxes(0, 1)).convert()
-			self._backdrop_size = size
-		return self._backdrop
-
-	def party_title(self):
-		"""Tonight's name: the welcome title from the panel while the welcome popup is on (emoji
-		dropped, the TV fonts have none), else the app's name."""
-		import unicodedata
+	def tv_settings(self):
+		"""(skin, title) from the panel's settings, re-read only when that file changes. The
+		title: the panel's TV title, else the welcome title while the welcome is on, else the
+		app's name."""
 		try:
 			from panel import config as ohk_config
-			mtime = os.path.getmtime(ohk_config.CONFIG_PATH) if os.path.exists(ohk_config.CONFIG_PATH) else None
-			if getattr(self, '_party_mtime', 0) == mtime:
-				return self._party_title
-			cfg = ohk_config.load()
-			t = cfg['welcome_title'] if cfg.get('welcome_enabled') else ''
+			path = ohk_config.CONFIG_PATH
+			mtime = os.path.getmtime(path) if os.path.exists(path) else None
+			if getattr(self, '_tv_mtime', 0) != mtime:
+				cfg = ohk_config.load()
+				title = cfg['tv_title'] or (cfg['welcome_title'] if cfg['welcome_enabled'] else '')
+				self._tv_mtime, self._tv_settings = mtime, (cfg['tv_skin'], title)
+			skin, title = self._tv_settings
 		except Exception:
-			mtime, t = None, ''
-		t = ''.join(ch for ch in (t or '') if unicodedata.category(ch) not in ('So', 'Cf', 'Mn', 'Cs') and ch != '️')
-		self._party_mtime, self._party_title = mtime, ' '.join(t.split()) or getString(136)
-		return self._party_title
-
-	def singer_color(self, name):
-		"""The singer's colour, the same hash as singerColor() on the phones."""
-		x = 0
-		for ch in str(name or '?'):
-			x = (x * 31 + ord(ch)) & 0xFFFFFFFF
-		return pygame.Color(self.SINGER_COLORS[x % len(self.SINGER_COLORS)])
-
-	@staticmethod
-	def label(ii):
-		"""A translated "connect at" label with a space before the URL (some translations end in "a")."""
-		t = getString(ii)
-		return t if not t or t[-1].isspace() else t + ' '
-
-	def splash_font(self, face, px):
-		fonts = self.__dict__.setdefault('_splash_fonts', {})
-		if (face, px) not in fonts:
-			path = os.path.join(self.splash_fonts_dir, face + '.woff2') if face.startswith('barlow') else f'font/{face}.ttf'
-			f = pygame.freetype.Font(path, px)
-			f.origin = True     # render_to() places the baseline
-			fonts[(face, px)] = f
-		return fonts[(face, px)]
-
-	def splash_text(self, text, size, color, pos, face='barlowcondensed-600', track=0, anchor='topleft', max_w=None, draw=True):
-		"""Draw one line of Barlow (falling back to the unicode fonts for other scripts) at a size
-		given for a 1920-wide screen; `track` is letter-spacing in the same units. Long lines end
-		in an ellipsis at max_w. Returns the rect drawn."""
-		r = self.screen.get_width() / self.ref_W
-		px = max(8, round(size * r))
-		font, text = self.splash_pick(str(text), face, px)
-		text = get_display(arabic_reshaper.reshape(text))
-		gap = track * r
-		width = lambda t: sum(m[4] for m in font.get_metrics(t) if m) + gap * max(0, len(t) - 1)
-		if max_w and width(text) > max_w:
-			while len(text) > 1 and width(text + '…') > max_w:
-				text = text[:-1]
-			text = text.rstrip() + '…'
-		asc, desc = font.get_sized_ascender(), font.get_sized_descender()
-		if not draw:
-			return pygame.Rect(0, 0, math.ceil(width(text)), asc - desc).move(round(pos[0]), round(pos[1]))
-		surf = pygame.Surface((max(1, math.ceil(width(text))), asc - desc), pygame.SRCALPHA)
-		if gap:
-			x = 0
-			for ch in text:
-				font.render_to(surf, (x, asc), ch, color)
-				x += (font.get_metrics(ch)[0] or (0, 0, 0, 0, 0))[4] + gap
-		else:
-			font.render_to(surf, (0, asc), text, color)
-		rect = surf.get_rect(**{anchor: (round(pos[0]), round(pos[1]))})
-		self.screen.blit(surf, rect)
-		return rect
-
-	def splash_pick(self, text, face, px):
-		"""Barlow when it has every glyph, else the first unicode font that does, else a transliteration."""
-		for name in (face, 'arial-unicode-ms', 'unifont'):
-			f = self.splash_font(name, px)
-			if None not in f.get_metrics(text):
-				return f, text
-		return self.splash_font(face, px), unidecode(text)
-
-	def splash_fit(self, text, sizes, max_w, max_lines):
-		"""The biggest size at which `text` wraps into max_lines lines (the last one may end in …)."""
-		r = self.screen.get_width() / self.ref_W
-		words = str(text).split()
-		for size in sizes:
-			font, _ = self.splash_pick(str(text), 'barlowcondensed-600', max(8, round(size * r)))
-			w = lambda t: sum(m[4] for m in font.get_metrics(t) if m)
-			lines, cur = [], ''
-			for word in words:
-				if cur and w(cur + ' ' + word) > max_w:
-					lines.append(cur)
-					cur = word
-				else:
-					cur = (cur + ' ' + word).strip()
-			lines.append(cur)
-			if len(lines) <= max_lines:
-				return size, lines
-			if size == sizes[-1]:
-				return size, lines[:max_lines - 1] + [' '.join(lines[max_lines - 1:])]
-		return sizes[-1], [str(text)]
+			skin, title = 'karaoke', ''
+		return skin, (tv_skins.clean(title) or getString(136))
 
 	def render_font(self, sizes, text, *kargs):
 		if type(sizes) != list:
@@ -1405,6 +1299,7 @@ class Karaoke:
 		if not self.is_file_playing() or not self.has_video:
 			self.render_splash_screen()
 			pygame.display.update()
+		self.update_tv_bar()
 		pygame.time.wait(100)
 
 	# Use this to reset the screen in case it loses focus

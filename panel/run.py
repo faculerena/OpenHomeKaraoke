@@ -13,7 +13,8 @@ from panel import config as C
 
 
 def _app_args(cfg):
-	args = ['-d', C.song_dir(cfg), '-nv', '--cloud', f"http://localhost:{cfg['asr_port']}"]
+	args = ['-d', C.song_dir(cfg), '-nv', '--cloud', f"http://localhost:{cfg['asr_port']}",
+			'--lang', cfg['tv_lang']]
 	if cfg['mode'] == 'public':
 		# the splash/QR must point at the public hostnames, not the LAN IP
 		args += ['--url', cfg['public_url'], '--tv-url', cfg['public_tv_url']]

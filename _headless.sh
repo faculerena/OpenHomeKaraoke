@@ -29,6 +29,11 @@ fi
 export PULSE_SINK="$OHK_SINK"
 export OHK_SINK
 
+# The bar along the top (or bottom) of the TV while a song plays: the app writes its text
+# here, stream-tv.sh draws it into the stream. Empty files = no bar.
+export OHK_TV_BAR="$XDG_RUNTIME_DIR/ohk-tvbar-$PORT"
+mkdir -p "$OHK_TV_BAR" && : > "$OHK_TV_BAR/top.txt" && : > "$OHK_TV_BAR/bottom.txt"
+
 CLEANED=0
 cleanup(){ [ "$CLEANED" = 1 ] && return; CLEANED=1; pkill -TERM -P $$ 2>/dev/null; sleep 0.5; pkill -KILL -P $$ 2>/dev/null
 	[ -n "${SINK_MODULE:-}" ] && pactl unload-module "$SINK_MODULE" 2>/dev/null; }

@@ -392,3 +392,25 @@ Not yet reviewed: the panel's queued station marks and Up next rows have not bee
 - **Don't** set type outside the `--t1` to `--t7` steps, or put song titles and sentences in uppercase.
 - **Don't** use Needle Red for anything but the needle, the slider thumb and the hot badge.
 - **Don't** fill danger actions. Danger is coral text with a half-alpha outline.
+
+## TV skins (exception)
+
+The TV between songs (`lib/tv_skins.py`, drawn with pygame) does **not** use the Radio de
+living world: it has six owner-chosen skins, picked in the panel (Settings, TV screen) and
+switched live: Karaoke box, Guirnalda de cotillón, Afiche riso, Sleeve + band, Bare
+essentials and Neón. They come from the 2026-11-25 direction board; the sketches are in
+`.impeccable/mocks/decision/`. Shared rules, whatever the skin:
+
+- A song is always named before the person who asked for it, never smaller than that name.
+- The title is the panel's TV title, else the welcome title, else the app's name.
+- The QR always has a light quiet zone and whole-pixel modules; every skin is checked to
+  scan after a 720p QP 28 encode.
+- The frame is static (the stream pays for it once), and its text comes from `lang/`
+  (lines 241-245), so the TV language follows the panel's setting.
+- Fonts are Fira Sans (OFL, in `font/`), with Arial Unicode and Unifont as fallbacks for
+  other scripts; emoji are dropped.
+- During a video song, the TV stream carries a scrolling bar: what's next (song · singer)
+  and where to join. It is drawn into the stream (stream-tv.sh, ffmpeg drawtext, Noto Sans
+  CJK) from text the app writes (karaoke.py `update_tv_bar`). It sits at the top, and moves
+  to the bottom for songs whose lyrics sit at the top (Karaoke Mugen). It is a neutral dark
+  bar in every skin, because the stream sets it up once at start and skins change live.

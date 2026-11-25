@@ -21,6 +21,17 @@ No pausen canciones de otros.
 Pueden tocar **MUSIC | MIXED | VOICE** para sacarle la voz a alguna canción.
 Díganle feliz cumple a Mega 🥳'''
 
+# key, name in the panel. Drawn by lib/tv_skins.py; listed here so the panel needs no pygame.
+TV_SKINS = [
+	('karaoke', 'Karaoke box: video blue, outlined letters, the colour wipe'),
+	('cotillon', 'Guirnalda de cotillón: the title as a paper letter garland'),
+	('riso', 'Afiche riso: two-ink party poster (light paper)'),
+	('obi', 'Sleeve + band: the QR alone, the queue as credits (light face)'),
+	('bare', 'Bare essentials: big QR, the song, who sings'),
+	('neon', 'Neón: karaoke-lounge glow'),
+]
+TV_LANGS = [('es', 'Español'), ('en_US', 'English')]
+
 DEFAULTS = {
 	'mode': 'tv',                         # last mode started; the panel preselects it
 	'whisper_model': 'medium',
@@ -28,6 +39,10 @@ DEFAULTS = {
 	'asr_port': 5005,
 	'tv_quality': None,                   # QP 20-34; None = stream-tv.sh default (28)
 	'tv_scale': None,                     # output height in px; None = native 720p
+	# the TV between songs (lib/tv_skins.py); read live, no restart needed
+	'tv_skin': 'karaoke',
+	'tv_title': '',                       # the big title; blank = the welcome title, else the app name
+	'tv_lang': 'es',                      # language of the TV's own text (app --lang)
 	'admin_password': '',
 	'public_url': 'https://karaoke.timbear.gratis',
 	'public_tv_url': 'https://tv.timbear.gratis',
@@ -107,6 +122,19 @@ def validate(new, old):
 				if len(v) > limit:
 					return None, f'{k} is too long (max {limit} characters)'
 				cfg[k] = v
+		if 'tv_skin' in new:
+			if new['tv_skin'] not in dict(TV_SKINS):
+				return None, 'unknown TV skin'
+			cfg['tv_skin'] = new['tv_skin']
+		if 'tv_lang' in new:
+			if new['tv_lang'] not in dict(TV_LANGS):
+				return None, 'unknown TV language'
+			cfg['tv_lang'] = new['tv_lang']
+		if 'tv_title' in new:
+			v = ' '.join(str(new['tv_title']).split())
+			if len(v) > 60:
+				return None, 'TV title is too long (max 60 characters)'
+			cfg['tv_title'] = v
 		if 'cf_config' in new:
 			cfg['cf_config'] = str(new['cf_config']).strip()
 		# write-only: a blank field keeps the current password; clearing is explicit

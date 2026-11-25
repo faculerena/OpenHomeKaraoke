@@ -139,6 +139,39 @@ fi
 FILTER=()
 [ -n "$SCALE" ] && FILTER=(-F "scale_vaapi=w=-2:h=$SCALE:format=nv12")
 
+# The scrolling bar (OHK_TV_BAR, from _headless.sh): what's next and where to join, drawn into
+# the stream while a song plays. wf-recorder can't draw text on GPU frames, so with the bar on,
+# the HLS step decodes, draws (ffmpeg drawtext, re-reading the app's text files twice a
+# second) and re-encodes on the GPU; wf-recorder then encodes finer, so the second pass costs
+# no visible quality. A bar whose file is empty is moved off-screen. If the bar can't be set
+# up on this machine, the stream goes out without it, as before.
+BAR="${OHK_TV_BAR:-}"
+BARF=""
+if [ -n "$BAR" ] && [ -d "$BAR" ]; then
+	if fc-list -q "Noto Sans CJK JP" 2>/dev/null; then FS="font=Noto Sans CJK JP\\\\:style=Bold"
+	else FS="fontfile=$PWD/font/arial-unicode-ms.ttf"; fi
+	bar(){  # $1 file, $2 y of the text; the first drawtext is only the full-width box
+		local hide="if(eq(tw\\,0)\\,-9999\\,$2)"
+		printf '%s' "drawtext=$FS:textfile=$BAR/$1:reload=15:fontsize=h/33:fontcolor=black@0:x=0:y=$hide:y_align=font:box=1:boxw=100000:boxcolor=0x0d0d0d@0.82:boxborderw=11,drawtext=$FS:textfile=$BAR/$1:reload=15:fontsize=h/33:fontcolor=0xffffff:x=w-mod(t*w/10\\,w+tw):y=$hide:y_align=font"
+	}
+	BARF="$(bar top.txt 11),$(bar bottom.txt 'h-11-h/33*1.45')"
+	if ffmpeg -hide_banner -loglevel error -init_hw_device vaapi=va:/dev/dri/renderD128 -filter_hw_device va \
+		-f lavfi -i color=c=black:s=320x240:d=0.3 -vf "$BARF,format=nv12,hwupload" -c:v h264_vaapi -f null - 2>"$D/bar-test.log"; then
+		# the HLS step encodes at the asked quality; wf-recorder feeds it finer
+		WQ=$(( VQ - 6 < 16 ? 16 : VQ - 6 ))
+		if [ -n "$VKBPS" ]; then
+			FRC=(-rc_mode VBR -b:v "${VKBPS}k" -maxrate "$((VKBPS * 5 / 4))k" -bufsize "$((VKBPS * 2))k")
+		else
+			FRC=(-rc_mode CQP -qp "$VQ")
+		fi
+		RC=(-p rc_mode=CQP -p qp="$WQ")
+		RCDESC="$RCDESC, with the song bar"
+	else
+		echo "TV bar disabled: $(tail -1 "$D/bar-test.log")"
+		BARF=""
+	fi
+fi
+
 echo "Capturing $OUTDESC with audio '$AUDIO'"
 echo "Video: ${SCALE:+${SCALE}p }$RCDESC @ ${FPS}fps, keyframe/segment ${SEG_SEC}s, audio ${AKBPS}k"
 wf-recorder "${WFOUT[@]}" -c h264_vaapi -d /dev/dri/renderD128 -r "$FPS" \
@@ -148,8 +181,15 @@ WF=$!
 # fast TS probe (-analyzeduration/-probesize) so ffmpeg opens immediately instead of analyzing ~5s;
 # nobuffer/low_delay stop it holding frames back. temp_file matters at this segment size: without
 # it the HTTP server can hand the player a half-written .ts, which stalls playback.
+if [ -n "$BARF" ]; then
+	CODEC=(-init_hw_device vaapi=va:/dev/dri/renderD128 -filter_hw_device va)
+	ENC=(-vf "$BARF,format=nv12,hwupload" -c:v h264_vaapi -g "$GOP" -bf 0 "${FRC[@]}"
+		-force_key_frames "expr:gte(t,n_forced*$SEG_SEC)" -c:a copy)
+else
+	CODEC=(); ENC=(-c copy)
+fi
 ffmpeg -hide_banner -loglevel error -analyzeduration 500000 -probesize 200000 \
-	-fflags +genpts+nobuffer -flags low_delay -i "$FIFO" -c copy \
+	-fflags +genpts+nobuffer -flags low_delay "${CODEC[@]}" -i "$FIFO" "${ENC[@]}" \
 	-f hls -hls_time "$SEG_SEC" -hls_list_size 6 \
 	-hls_flags delete_segments+independent_segments+omit_endlist+temp_file \
 	-hls_segment_type mpegts -hls_segment_filename "$D/seg_%05d.ts" "$D/index.m3u8" 2>"$D/ff.log" &

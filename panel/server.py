@@ -12,6 +12,7 @@
 # So: the Host header must be one of ours (DNS rebinding), every state change is a JSON
 # POST (a cross-site form can't send that without a CORS preflight we never answer), the
 # Origin, when sent, must be ours too, and GETs never change anything.
+import hashlib
 import io
 import ipaddress
 import json
@@ -309,6 +310,8 @@ def public_settings(cfg):
 	out = {k: v for k, v in cfg.items() if k != 'admin_password'}
 	out['admin_password_set'] = bool(cfg['admin_password'])
 	out['whisper_models'] = C.WHISPER_MODELS
+	out['tv_skins'] = C.TV_SKINS
+	out['tv_langs'] = C.TV_LANGS
 	return out
 
 
@@ -535,6 +538,69 @@ def api_qr():
 	buf = io.BytesIO()
 	img.save(buf)
 	return buf.getvalue(), 200, {'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=3600'}
+
+
+# ---- TV screen preview ------------------------------------------------------------------
+PREVIEW_DIR = os.path.expanduser('~/.cache/ohk/tv-preview')
+_preview_slots = threading.Semaphore(3)
+DEMO_SINGERS = ['Ana', 'Juan', 'Sofi', 'Tito']
+
+
+def _preview_queue():
+	"""The live queue when the karaoke runs and has one; else a few library songs with
+	example names (the panel labels it as an example)."""
+	st = S.http_json(f'http://127.0.0.1:{C.APP_PORT}/ohk_status', timeout = 2) or {}
+	q = [[x.get('title'), x.get('user')] for x in st.get('queue') or [] if x.get('title')]
+	if st.get('now_playing'):
+		q = [[st['now_playing'], st.get('now_playing_user')]] + q
+	if q:
+		return q, False
+	try:
+		titles = [x['title'] for x in library.songs()['songs'] if not x['hidden']][:4]
+	except OSError:
+		titles = []
+	return [[t, DEMO_SINGERS[i]] for i, t in enumerate(titles)], True
+
+
+@app.get('/api/tv-preview')
+def api_tv_preview():
+	"""PNG of a skin as the TV would show it, rendered by lib/tv_skins.py in a subprocess
+	(pygame wants its own process). Cached by everything that goes into the picture."""
+	cfg = C.load()
+	skin = request.args.get('skin', cfg['tv_skin'])
+	if skin not in dict(C.TV_SKINS):
+		abort(404)
+	lang = request.args.get('lang', cfg['tv_lang'])
+	if lang not in dict(C.TV_LANGS):
+		abort(404)
+	title = ' '.join(request.args.get('title', '').split())[:60] or \
+		(cfg['welcome_title'] if cfg['welcome_enabled'] else '')
+	queue, demo = _preview_queue()
+	state = request.args.get('state', 'next') if queue else 'idle'
+	if cfg['mode'] == 'public':
+		url, tv_url = cfg['public_url'], cfg['public_tv_url']
+	else:
+		url, tv_url = f'http://{socket.gethostname()}.local:{C.APP_PORT}', None
+	spec = {'skin': skin, 'state': state, 'title': title, 'lang': lang, 'url': url, 'tv_url': tv_url,
+			'queue': queue[:6], 'size': [960, 540]}
+	qr = os.path.join(C.REPO, 'qrcode.png')
+	key = hashlib.sha1((json.dumps(spec, sort_keys = True) + str(os.path.getmtime(qr) if os.path.exists(qr) else 0)
+			+ str(os.path.getmtime(os.path.join(C.REPO, 'lib', 'tv_skins.py')))).encode()).hexdigest()[:20]
+	os.makedirs(PREVIEW_DIR, exist_ok = True)
+	out = os.path.join(PREVIEW_DIR, key + '.png')
+	if not os.path.exists(out):
+		with _preview_slots:
+			tmp = out + '.tmp.png'
+			r = subprocess.run([C.PY, '-m', 'lib.tv_skins', tmp], cwd = C.REPO, input = json.dumps(spec),
+					capture_output = True, text = True, timeout = 60,
+					env = dict(os.environ, SDL_VIDEODRIVER = 'dummy', SDL_AUDIODRIVER = 'dummy'))
+			if r.returncode or not os.path.exists(tmp):
+				return result('preview failed: ' + (r.stderr.strip().splitlines() or ['?'])[-1])
+			os.replace(tmp, out)
+	with open(out, 'rb') as f:
+		data = f.read()
+	return data, 200, {'Content-Type': 'image/png', 'Cache-Control': 'no-store',
+			'X-Demo-Queue': '1' if demo else '0'}
 
 
 @app.get('/')
