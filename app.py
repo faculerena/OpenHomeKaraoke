@@ -628,7 +628,11 @@ def browse():
 		letter = letter,
 		title = getString2(98),
 		songs = songs[start_index:start_index + results_per_page],
-		admin = is_admin()
+		admin = is_admin(),
+		# Without an admin password every visitor counts as admin, so the per-song edit button
+		# showed for everyone. Guests just add songs; editing is for a logged-in admin (or the
+		# admin panel's Library tab).
+		can_edit = admin_password is not None and is_admin(),
 	)
 @app.route("/f_browse", methods = ["GET"])
 def f_browse():
@@ -668,7 +672,11 @@ def f_browse():
 		letter = letter,
 		title = getString2(98),
 		songs = songs[start_index:start_index + results_per_page],
-		admin = is_admin()
+		admin = is_admin(),
+		# Without an admin password every visitor counts as admin, so the per-song edit button
+		# showed for everyone. Guests just add songs; editing is for a logged-in admin (or the
+		# admin panel's Library tab).
+		can_edit = admin_password is not None and is_admin(),
 	)
 
 def transform_boolean(dct, S):

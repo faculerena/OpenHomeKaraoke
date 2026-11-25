@@ -17,7 +17,18 @@
     top: 3px;
     z-index: 20;
   }
+  /* the add button sits at the end of the row, where a right thumb finds it */
+  .browse-table { width: 100%; }
+  .browse-table td { vertical-align: middle; padding: 6px 4px; }
+  .browse-n { width: 2.2em; color: var(--faint, #a08a6d); font-variant-numeric: tabular-nums; }
+  .browse-title { overflow-wrap: anywhere; }
+  .browse-act { width: 48px; text-align: center; }
+  .browse-act a { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; }
+  .browse-act .icon { font-size: 22px; }
   @media screen and (max-width: 500px) {
+    /* room for the A-Z bar that appears on the right edge once you scroll */
+    .browse-table { padding-right: 26px; }
+    .browse-table tr td:last-child { padding-right: 30px; }
     #alpha-bar {
       font-size: 13px;
       position: fixed;
@@ -56,21 +67,22 @@
 
 {{ pagination.links }}
 {{ pagination.info }}
-<table>
+<table class="browse-table">
   {% for song in songs %}
   <tr value='{{ song }}'>
-    <td width="20px" style="padding: 5px 0px">{{loop.index + pagination.skip}}</td>
-    <td id={{filename_from_path(song)[0].lower()}} width="20px" style="padding: 5px 0px">
-      <a class='add-song-link has-text-weight-bold has-text-success' title="{{getString1(97)%filename_from_path(song)}}"
-        href="{{url_for('enqueue')}}?song={{url_escape(song.encode('utf-8'))}}&user="><i class="icon icon-list-add"></i> </a>
-    </td>
-    <td>{{filename_from_path(song)}}</td>
-    {% if admin %}
-      <td width="20px">
+    <td class="browse-n">{{loop.index + pagination.skip}}</td>
+    <td class="browse-title">{{filename_from_path(song)}}</td>
+    {% if can_edit %}
+      <td class="browse-act">
         <a class='edit-button' onclick="onEdit('/f_edit?song={{url_escape(song.encode())}}')"
-          title="{{getString1(104)}}"><i class="icon icon-edit-1"></i> </a>
+          title="{{getString1(104)}}"><i class="icon icon-edit-1"></i></a>
       </td>
     {% endif %}
+    <td id={{filename_from_path(song)[0].lower()}} class="browse-act">
+      <a class='add-song-link' title="{{getString1(97)%filename_from_path(song)}}"
+        href="{{url_for('enqueue')}}?song={{url_escape(song.encode('utf-8'))}}&user="><i class="icon icon-list-add"></i></a>
+    </td>
+  </tr>
     {% endfor %}
 </table>
 {{ pagination.links }}
