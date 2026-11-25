@@ -36,10 +36,19 @@ def _log(rng):
 	return [dict(zip(('sha', 'date', 'subject'), L.split('\t', 2))) for L in out.splitlines()] if out else []
 
 
+def _fetch(remote):
+	# BatchMode: never sit waiting on an SSH passphrase/host-key prompt inside a service
+	env = dict(os.environ, GIT_SSH_COMMAND = 'ssh -o BatchMode=yes -o ConnectTimeout=10', GIT_TERMINAL_PROMPT = '0')
+	try:
+		r = subprocess.run(['git', '-C', C.REPO, 'fetch', '--quiet', remote], capture_output = True,
+		                   text = True, timeout = 60, env = env)
+	except subprocess.TimeoutExpired:
+		return f'{remote}: timed out'
+	return None if r.returncode == 0 else f"{remote}: {(r.stderr.strip().splitlines() or ['failed'])[-1]}"
+
+
 def git(fetch = False):
-	if fetch:
-		for remote in ('fork', 'origin'):
-			_git('fetch', '--quiet', remote, timeout = 60)
+	errors = [e for e in (_fetch(r) for r in ('fork', 'origin')) if e] if fetch else []
 	branch = _git('rev-parse', '--abbrev-ref', 'HEAD')
 	dirty = bool(_git('status', '--porcelain', '--untracked-files=no'))
 	has_fork = _git('rev-parse', '--verify', '--quiet', f'fork/{branch}') is not None
@@ -52,6 +61,7 @@ def git(fetch = False):
 		'unpushed': _log(f'fork/{branch}..HEAD') if has_fork else [],
 		'upstream_new': _log('HEAD..origin/master'),                        # needs a manual merge
 		'last_fetch': _fetch_time(),
+		'fetch_errors': errors,
 	}
 
 

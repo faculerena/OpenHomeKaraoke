@@ -55,12 +55,21 @@ remembering `./start-karaoke.sh` flags and reading tmux panes.
   QR codes, a real song playing with video in cage (first confirmation of that), "Now"
   card live, a job run as a transient unit with its log, and Stop leaving no processes,
   ports or audio sink behind. The admin password never appears in any log.
+- Admin password (set from the panel, throwaway): reaches the app through cage via the
+  environment, the app enforces it (wrong password -> login page), and it is on no
+  karaoke process's command line, in no journal line and in no log view.
+- `/ohk_status` answered 90/90 polls across two song skips and the end of the queue.
+- Per-service restart; the big Restart revives a crashed (SIGKILLed) GPU server; both
+  launchers refuse while the other is running; "check now" fetches fine from inside the
+  service; the pre-split job (split the 3 songs that had no stems) and the yt-dlp
+  update job.
 - Public mode refuses to start without an admin password. Cleanup tested on a scratch
   library: moves only orphans/old partials, refuses real songs and path tricks.
 
 ### Not tested yet
-- **Monitor mode** (it takes over this screen).
+- **Monitor mode** (it takes over this screen), and switching between modes.
 - **Public mode for real** (needs an admin password set, then exercises the tunnel).
+- "Update code" (fast-forward): inert until this branch exists on the fork.
 - Opening the actual app window from the launcher, and the panel from a phone on the
   tailnet. Also refusing a tailnet device logged in as a *different* Tailscale user (no
   such device to try).

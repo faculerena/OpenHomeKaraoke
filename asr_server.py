@@ -147,7 +147,7 @@ def split_vocal():
 	try:
 		f.save(in_m4a)
 		VS.ffm_video2wav(in_m4a, in_wav)
-		with split_lock, _doing('split', os.path.basename(f.filename or 'song')):
+		with split_lock, _doing('split', os.path.basename(request.form.get('name') or f.filename or 'song')):
 			VS.split_vocal_by_dnn(in_wav, nv_wav, v_wav, G.split_args)
 		VS.ffm_wav2m4a(nv_wav, nv_m4a)
 		VS.ffm_wav2m4a(v_wav, v_m4a)

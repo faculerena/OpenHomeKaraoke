@@ -45,7 +45,8 @@ for f in "$D"/*.mp4 "$D"/*.webm "$D"/*.mkv "$D"/*.avi; do
 	if ! ffmpeg -y -v error -i "file:$f" -vn -c copy -f matroska "$t/in.m4a" 2>/dev/null; then
 		echo "[FAIL]  $bn (audio extract)"; fail=$((fail+1)); rm -rf "$t"; continue
 	fi
-	if curl -s --max-time 1800 -F "file=@$t/in.m4a" "$CLOUD/split_vocal" -o "$t/out.tgz" \
+	# name: only for the admin panel's "now splitting" line (--form-string: taken literally)
+	if curl -s --max-time 1800 -F "file=@$t/in.m4a" --form-string "name=$bn" "$CLOUD/split_vocal" -o "$t/out.tgz" \
 	   && tar tzf "$t/out.tgz" >/dev/null 2>&1; then
 		tar xzf "$t/out.tgz" -C "$t"
 		mv -f "$t/nonvocal.m4a" "$D/nonvocal/$bn.m4a"

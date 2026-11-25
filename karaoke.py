@@ -193,7 +193,9 @@ class Karaoke:
 					# nothing and the song never got its stems. The server probes by content.
 					os.system(f'ffmpeg -y -v error -i "file:{fn}" -vn -c copy -f matroska "{self.tmp_dir}/input.m4a"')
 					with open(f'{self.tmp_dir}/input.m4a', 'rb') as f:
-						r = requests.post(self.cloud+'/split_vocal', files={'file': f})
+						# name: only for the admin panel's "now splitting" line
+						r = requests.post(self.cloud+'/split_vocal', files={'file': f},
+						                  data={'name': os.path.basename(fn)})
 					with open(f'{self.tmp_dir}/output.tar.gz', 'wb') as f:
 						f.write(r.content)
 					with tarfile.open(f'{self.tmp_dir}/output.tar.gz') as tar:

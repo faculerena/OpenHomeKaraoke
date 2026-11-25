@@ -254,16 +254,11 @@ function paintModes() {
 $('#start').addEventListener('click', async () => {
 	$('#start').disabled = true;
 	say($('#ctlmsg'), status && status.mode && status.mode !== selMode ? 'Switching mode: the app restarts…' : 'Starting…', 'info');
-	const r = status && status.mode === selMode ? await restartAll() : await post('/api/start', {mode: selMode});
+	const r = await post('/api/start', {mode: selMode});   // same mode running = restart it
 	say($('#ctlmsg'), r.error);
 	$('#start').disabled = false;
 	tick();
 });
-async function restartAll() {
-	for (const k of Object.keys(status.services))
-		if (!['stopped', 'failed'].includes(status.services[k].health)) await post('/api/restart', {service: k});
-	return {ok: true};
-}
 $('#stop').addEventListener('click', async () => {
 	const r = await post('/api/stop'); say($('#ctlmsg'), r.error); tick();
 });
@@ -417,6 +412,8 @@ function paintUpdates(U) {
 	kids.push(h('dl', {class: 'kv'},
 		h('dt', {}, 'Code'), h('dd', {}, `${g.branch} · ${g.head}${g.dirty ? ' · uncommitted changes' : ''}`),
 		h('dt', {}, 'Checked'), h('dd', {}, g.last_fetch ? new Date(g.last_fetch * 1000).toLocaleString() : 'never')));
+	if (g.fetch_errors && g.fetch_errors.length)
+		kids.push(h('div', {class: 'msg show err'}, 'Could not check: ' + g.fetch_errors.join(' · ')));
 	if (g.incoming.length) kids.push(h('p', {}, `${g.incoming.length} new on ${g.fork_branch}:`), commits(g.incoming),
 		h('button', {class: 'btn small primary', onclick: async () => {
 			const r = await post('/api/updates/pull'); alertIn(box, r.error || 'Updated. Restart karaoke to run the new code.'); loadUpdates();

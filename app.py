@@ -468,7 +468,11 @@ def ohk_status():
 	# Live activity for the admin panel (panel/). Only what guests can already see in the web
 	# UI (now playing, the queue, the library size), plus background-work counts — so it is
 	# fine that this port is reachable from the LAN and, with the tunnel, from the internet.
-	s = K.get_state() if K.now_playing else {}
+	# same guard as /nowplaying: mid song-change the player state is briefly unreadable
+	try:
+		s = K.get_state() if K.now_playing and not K.switchingSong else {}
+	except Exception:
+		s = {}
 	dl = [v for v in K.downloading_songs.values() if v == 1]
 	return json.dumps({
 		'now_playing': K.now_playing,

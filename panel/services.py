@@ -204,7 +204,14 @@ def start(mode):
 		if not os.path.isfile(os.path.expanduser(cfg['cf_config'])):
 			return f"Cloudflare tunnel config not found: {cfg['cf_config']}"
 	app_units = [SERVICES[k]['unit'] for k in ('app', 'app-tv')]
-	if mode != running_mode() and any(unit_state(u)['active'] in ('active', 'activating') for u in app_units):
+	current = running_mode()
+	if mode == current:
+		# Restart: every unit of the mode, including one that crashed (restart starts it)
+		wanted = [SERVICES[k]['unit'] for k in MODE_SERVICES[mode]]
+		systemctl('reset-failed', *wanted)
+		r = systemctl('restart', '--no-block', *wanted)
+		return None if r.returncode == 0 else (r.stderr.strip() or 'systemctl restart failed')
+	if any(unit_state(u)['active'] in ('active', 'activating') for u in app_units):
 		# the app reads mode-dependent flags (public URLs) at start, so switching restarts it
 		systemctl('stop', *app_units)
 	cfg['mode'] = mode
