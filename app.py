@@ -170,6 +170,7 @@ def root():
 	return render_template(
 		"index.html",
 		welcome = welcome_popup(),
+		skin = K.tv_settings()[0],
 		getString1 = lambda ii: getString1(request.client_lang, ii),
 		show_transpose = K.use_vlc,
 		transpose_value = K.now_playing_transpose,
@@ -238,7 +239,8 @@ def nowplaying(return_json=True):
 			"audio_delay": s['audiodelay'],
 			"vol_norm": K.normalize_vol,
 			"play_speed": s['rate'],
-			"vocal_info": K.get_vocal_info()
+			"vocal_info": K.get_vocal_info(),
+			"skin": K.tv_settings()[0],        # phones follow the TV's look (panel setting)
 		}
 		if K.has_subtitle:
 			rc['subtitle_delay'] = s['subtitledelay']

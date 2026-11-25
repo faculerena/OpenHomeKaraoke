@@ -1,0 +1,117 @@
+/* The guests' phones wear the TV's skin (panel: Settings, TV screen; lib/tv_skins.py draws the
+   TV). Each skin retunes the roles ohk-radio.css is built on, then adds its one signature.
+   <html data-skin="..."> is set by the page and updated live by applySkin(). */
+@font-face { font-family: 'Fira Sans'; font-weight: 600; font-display: swap; src: url(/static/fonts/FiraSans-SemiBold.ttf) format('truetype'); }
+@font-face { font-family: 'Fira Sans'; font-weight: 800; font-display: swap; src: url(/static/fonts/FiraSans-ExtraBold.ttf) format('truetype'); }
+@font-face { font-family: 'Fira Sans'; font-weight: 900; font-display: swap; src: url(/static/fonts/FiraSans-Heavy.ttf) format('truetype'); }
+@font-face { font-family: 'Fira Sans Condensed'; font-weight: 600; font-display: swap; src: url(/static/fonts/FiraSansCondensed-SemiBold.ttf) format('truetype'); }
+@font-face { font-family: 'Fira Sans Compressed'; font-weight: 800; font-display: swap; src: url(/static/fonts/FiraSansCompressed-ExtraBold.ttf) format('truetype'); }
+@font-face { font-family: 'Fira Sans Compressed'; font-weight: 900; font-display: swap; src: url(/static/fonts/FiraSansCompressed-Heavy.ttf) format('truetype'); }
+
+html[data-skin] {
+	--sans: 'Fira Sans', 'Noto Sans', 'Noto Sans CJK JP', system-ui, sans-serif;
+	--seg-shadow: none;
+}
+
+/* ---- Karaoke box: video blue, outlined white letters, the orange wipe ------------------- */
+html[data-skin="karaoke"] {
+	--ground: #0b2fa8; --cab: #0a2790; --cab-2: #1a3fbf; --line: #3a5ccc;
+	--print: #ffffff; --dim: #cfe6ff; --faint: #9dbdf0;
+	--amber: #fff200; --amber-ink: #000000; --needle: #ff7a00; --eye: #7dffb0; --bad: #ff9a8a;
+	--cond: 'Fira Sans', 'Noto Sans CJK JP', system-ui, sans-serif; --head-weight: 900;
+	--overlay: #000a33; --lyric-active: #ff7a00; --lyric-past: #8fa8e0;
+	--glass: linear-gradient(180deg, #0a2790, #071c6b);
+	--singers: #fff200, #ffffff, #7dffb0, #ffb36b, #ff9bd2, #9fe9ff, #c9b6ff, #ffd27a;
+	--seg-shadow: 0 0 2px #000, 1px 1px 0 #000;
+}
+html[data-skin="karaoke"] body {
+	background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, .14) 0 2px, transparent 2px 4px) !important; }
+html[data-skin="karaoke"] #container { background: transparent !important; }
+html[data-skin="karaoke"] :is(h1, h2, .title, #now-playing, #lyrics-body.is-synced .lyrics-line.is-active) {
+	-webkit-text-stroke: 5px #000; paint-order: stroke fill; }
+html[data-skin="karaoke"] #now-playing .singer { -webkit-text-stroke: 4px #000; paint-order: stroke fill; font-weight: 800; }
+html[data-skin="karaoke"] .content h3 { color: var(--amber) !important; }
+
+/* ---- Guirnalda de cotillón: crepe-paper red, a pennant garland under the bar ------------ */
+html[data-skin="cotillon"] {
+	--ground: #8a1a1f; --cab: #74151a; --cab-2: #9e2b30; --line: #b34a4d;
+	--print: #fff4dc; --dim: #ffd9c2; --faint: #eba99c;
+	--amber: #ffd23f; --amber-ink: #1b1b1b; --needle: #7fe0d4; --eye: #9be36d; --bad: #ffd23f;
+	--cond: 'Fira Sans Compressed', 'Fira Sans', 'Noto Sans CJK JP', system-ui, sans-serif; --head-weight: 900;
+	--overlay: #2a0608; --lyric-active: #ffd23f;
+	--glass: linear-gradient(180deg, #74151a, #5c1014);
+	--singers: #ffd23f, #7fe0d4, #ff8fb1, #fff4dc, #9be36d, #ffb36b, #d7c4ff, #9fd0f0;
+}
+html[data-skin="cotillon"] body {
+	background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, .08) 0 3px, transparent 3px 9px) !important; }
+html[data-skin="cotillon"] #container { background: transparent !important; }
+html[data-skin="cotillon"] #container::before {     /* the garland hangs at the top of every page */
+	content: ""; display: block; height: 28px; margin: -22px -18px 18px; pointer-events: none;
+	background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='28'%3E%3Cpath d='M0 3 Q125 9 250 3' stroke='%23f3e6c8' stroke-width='1.5' fill='none'/%3E%3Cpath d='M8 4h30v17l-15 6-15-6z' fill='%23ffd23f'/%3E%3Cpath d='M58 6h30v17l-15 6-15-6z' fill='%237fe0d4'/%3E%3Cpath d='M108 7h30v17l-15 6-15-6z' fill='%23ff8fb1'/%3E%3Cpath d='M158 6h30v17l-15 6-15-6z' fill='%23fff4dc'/%3E%3Cpath d='M208 4h30v17l-15 6-15-6z' fill='%239be36d'/%3E%3C/svg%3E") repeat-x 0 0 / 250px 28px; }
+html[data-skin="cotillon"] .content h3 { color: var(--amber) !important; }
+
+/* ---- Afiche riso: paper, blue ink, pink printed a hair off register ---------------------- */
+html[data-skin="riso"] {
+	--ground: #cbbd9f; --cab: #c0b192; --cab-2: #d7cbb0; --line: #a6956f;
+	--print: #1d2a7a; --dim: #34418c; --faint: #5d5a7e;
+	--amber: #ff4f9a; --amber-ink: #1d2a7a; --needle: #2b4bd1; --eye: #1d6e4f; --bad: #b3134f;
+	--cond: 'Fira Sans Compressed', 'Fira Sans', 'Noto Sans CJK JP', system-ui, sans-serif; --head-weight: 900;
+	--overlay: #3b3324; --lyric-active: #e0306f; --lyric-past: #8c8466;
+	--glass: linear-gradient(180deg, #d7cbb0, #c0b192);
+	--tick: rgba(29, 42, 122, .8); --tick-minor: rgba(29, 42, 122, .35);
+	--singers: #1d2a7a, #c2185b, #0b6e4f, #a8481a, #5b2a86, #00695c, #7a5d00, #a61b29;
+	color-scheme: light;
+}
+html[data-skin="riso"] body {
+	background-image: radial-gradient(rgba(60, 40, 20, .16) 1px, transparent 1.3px) !important; background-size: 5px 5px !important; }
+html[data-skin="riso"] #container { background: transparent !important; }
+html[data-skin="riso"] :is(h1, h2, .title, #now-playing) { text-shadow: 3px 2px 0 rgba(255, 79, 154, .85); }
+html[data-skin="riso"] .content h3 { color: #c2185b !important; }
+
+/* ---- Sleeve + band: a pale sleeve face, the bar is the vermilion obi -------------------- */
+html[data-skin="obi"] {
+	--ground: #e6e0d4; --cab: #dad3c5; --cab-2: #f1ece3; --line: #c4bba9;
+	--print: #222222; --dim: #4a4540; --faint: #756e64;
+	--amber: #e8401c; --amber-ink: #fff7ea; --needle: #e8401c; --eye: #2f7d4f; --bad: #b3261e;
+	--cond: 'Fira Sans Compressed', 'Fira Sans', 'Noto Sans CJK JP', system-ui, sans-serif; --head-weight: 900;
+	--overlay: #2b2824; --lyric-active: #e8401c; --lyric-past: #a39a8b;
+	--glass: linear-gradient(180deg, #f1ece3, #dad3c5);
+	--tick: rgba(34, 34, 34, .75); --tick-minor: rgba(34, 34, 34, .3);
+	--singers: #e8401c, #1d4e89, #2f7d4f, #7a3e9d, #a8481a, #00695c, #7a5d00, #222222;
+	color-scheme: light;
+}
+html[data-skin="obi"] .navbar { background: #e8401c !important; border-bottom: 0; }
+html[data-skin="obi"] .navbar-item, html[data-skin="obi"] .navbar-burger { color: rgba(255, 247, 234, .78) !important; }
+html[data-skin="obi"] .navbar-item:hover { color: #fff7ea !important; }
+html[data-skin="obi"] .navbar-item.is-active { color: #fff7ea !important; box-shadow: inset 0 -3px 0 #fff7ea; }
+html[data-skin="obi"] .navbar-menu { background: #d23715 !important; border-bottom: 0; }
+html[data-skin="obi"] .content h3 { color: #e8401c !important; }
+
+/* ---- Bare essentials: black, white, one face ------------------------------------------- */
+html[data-skin="bare"] {
+	--ground: #000000; --cab: #0e0e0e; --cab-2: #1b1b1b; --line: #333333;
+	--print: #ffffff; --dim: #c8c8c8; --faint: #9a9a9a;
+	--amber: #ffffff; --amber-ink: #000000; --needle: #ffffff; --eye: #ffffff; --bad: #ff6b6b;
+	--cond: 'Fira Sans', 'Noto Sans CJK JP', system-ui, sans-serif; --head-weight: 800;
+	--overlay: #000000; --lyric-active: #ffffff; --lyric-past: #5a5a5a;
+	--glass: #0e0e0e;
+	--singers: #9fd0f0, #e9a6c9, #b9d98a, #f0a77a, #c6b3f5, #8fd6c8, #f5d77a, #f28b82;
+}
+html[data-skin="bare"] .navbar-item.is-active { box-shadow: inset 0 -2px 0 #fff; }
+
+/* ---- Neón: the karaoke-lounge glow ----------------------------------------------------- */
+html[data-skin="neon"] {
+	--ground: #0b0414; --cab: #170926; --cab-2: #241038; --line: #3d1a5e;
+	--print: #f6ecff; --dim: #d2bdea; --faint: #a08abd;
+	--amber: #ff5bd8; --amber-ink: #1a0014; --needle: #5ef3ff; --eye: #5ef3ff; --bad: #ff7a9a;
+	--cond: 'Fira Sans', 'Noto Sans CJK JP', system-ui, sans-serif; --head-weight: 900;
+	--overlay: #05010a; --lyric-active: #5ef3ff; --lyric-past: #6a5886;
+	--glass: radial-gradient(120% 160% at 50% 120%, #3a0f5e 0%, #170926 70%);
+	--singers: #ff5bd8, #5ef3ff, #b6ff5e, #ffd35e, #c6a0ff, #ff9a5e, #5effc1, #ff6b8a;
+}
+html[data-skin="neon"] body {
+	background-image: radial-gradient(circle at 70% 20%, #3a0f5e, #0b0414 60%) !important; background-attachment: fixed !important; }
+html[data-skin="neon"] #container { background: transparent !important; }
+html[data-skin="neon"] :is(h1, h2, .title, #now-playing) { color: #ff5bd8 !important; text-shadow: 0 0 14px rgba(255, 91, 216, .65); }
+html[data-skin="neon"] #lyrics-body.is-synced .lyrics-line.is-active { text-shadow: 0 0 12px rgba(94, 243, 255, .6); }
+html[data-skin="neon"] .content h3 { color: #5ef3ff !important; }

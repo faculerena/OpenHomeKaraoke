@@ -21,6 +21,7 @@ function getHHMMSS(value) {return (new Date(value*1000)).toISOString().substr(11
 function update(data){
 	try{obj = JSON.parse(data);}
 	catch{console.log(`JSON parse error: ${data}`);return;}
+	if (obj.skin && obj.skin !== document.documentElement.dataset.skin) applySkin(obj.skin);
 	if (obj.now_playing) {
 	clearTimeout(idleTimer); idleTimer = null;
 	var nowPlayingHtml = `<p style="margin-bottom: 5px">${obj.now_playing}</p>

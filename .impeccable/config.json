@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "fira sans",
+        "createdAt": "2026-11-25T20:52:53.964Z"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "fira sans condensed",
+        "createdAt": "2026-11-25T20:52:53.973Z"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "fira sans compressed",
+        "createdAt": "2026-11-25T20:52:53.982Z"
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-skin="{{ skin or 'karaoke' }}">
 
 <head>
 	{% if title %}
@@ -19,7 +19,8 @@
 	<link rel="icon" type="image/png" href="/static/images/microphone.png">
 	<link rel="stylesheet" href="/static/fontello/css/fontello.css">
 	<link rel="stylesheet" href="/static/ohk-radio.css">
-	<meta name="theme-color" content="#1d1410">
+	<link rel="stylesheet" href="/static/ohk-skins.css">
+	<meta name="theme-color" id="theme-color" content="#1d1410">
 </head>
 
 <style>
@@ -224,13 +225,25 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 		<div class="box" id="container" style="margin-top: 5px;"></div>
 	</div>
 <script>
-// one fixed colour per singer, the same palette as the admin panel's dial
-const SINGER_COLORS = ['#9fd0f0', '#e9a6c9', '#b9d98a', '#f0a77a', '#c6b3f5', '#8fd6c8', '#f5d77a', '#f28b82'];
+// one fixed colour per singer (same hash as the TV and the panel); each skin brings its own
+// eight, readable on its ground (ohk-skins.css --singers)
+let SINGER_COLORS = ['#9fd0f0', '#e9a6c9', '#b9d98a', '#f0a77a', '#c6b3f5', '#8fd6c8', '#f5d77a', '#f28b82'];
 function singerColor(name) {
 	let x = 0;
 	for (const c of String(name || '?')) x = (x * 31 + c.codePointAt(0)) >>> 0;
 	return SINGER_COLORS[x % SINGER_COLORS.length];
 }
+// the phones wear the TV's skin; a change in the panel arrives with the next status push
+function applySkin(name) {
+	const root = document.documentElement;
+	if (name && root.dataset.skin !== name) root.dataset.skin = name;
+	const css = getComputedStyle(root);
+	const list = css.getPropertyValue('--singers').split(',').map(s => s.trim()).filter(Boolean);
+	if (list.length) SINGER_COLORS = list;
+	const ground = css.getPropertyValue('--ground').trim();
+	if (ground) document.getElementById('theme-color').setAttribute('content', ground);
+}
+applySkin();
 const updateFreq = 5;
 var spectrum, dBASpectrum, recorder, audios, recorder_timeout, use_recorded;
 var timer, currentUser, ws, siriWave, g_stream, g_devices, taskHandle, source;

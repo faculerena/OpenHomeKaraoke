@@ -14,6 +14,16 @@
 	--sans: Barlow, 'Noto Sans', 'Noto Sans CJK JP', system-ui, sans-serif;
 	--cond: 'Barlow Condensed', Barlow, 'Noto Sans CJK JP', system-ui, sans-serif;
 	--t1: 13px; --t2: 15px; --t3: 17px; --t4: 20px; --t5: 26px; --t6: 34px;
+	/* derived roles, so a skin (ohk-skins.css) can retune them */
+	--accent-hover: color-mix(in srgb, var(--amber), white 22%);
+	--overlay: #0c0806;
+	--glass: radial-gradient(130% 160% at 35% 125%, #6a4512 0%, #3d2711 42%, #1f150d 100%);
+	--tick: color-mix(in srgb, var(--print) 75%, transparent);
+	--tick-minor: color-mix(in srgb, var(--print) 30%, transparent);
+	--seg-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+	--lyric-active: var(--amber);
+	--lyric-past: color-mix(in srgb, var(--faint) 70%, var(--ground));
+	--head-weight: 500;
 	color-scheme: dark;
 }
 html, body { background: var(--ground) !important; color: var(--print); font-family: var(--sans); font-size: var(--t3); }
@@ -22,10 +32,10 @@ body { -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transpa
 * { scrollbar-color: var(--line) transparent; caret-color: var(--amber); }
 :focus-visible { outline: 2px solid var(--amber) !important; outline-offset: 2px; }
 a, .control-box a { color: var(--amber); }
-a:hover, .control-box a:hover { color: #f6c566; }
+a:hover, .control-box a:hover { color: var(--accent-hover); }
 .content, .content p, .content li, .content td { color: var(--print); }
 h1, h2, h3, h4, .title, .content h1, .content h3, .content h4 {
-	font-family: var(--cond) !important; font-weight: 500 !important; color: var(--print) !important; letter-spacing: .01em; }
+	font-family: var(--cond) !important; font-weight: var(--head-weight) !important; color: var(--print) !important; letter-spacing: .01em; }
 .content h1, h1.title, .title { font-size: var(--t6) !important; line-height: 1.05 !important; }
 .content h3 { font-size: var(--t2) !important; letter-spacing: .16em !important; text-transform: uppercase; color: var(--faint) !important; font-weight: 600 !important; }
 .content h4 { font-size: var(--t4) !important; }
@@ -68,7 +78,7 @@ hr { background: var(--line) !important; height: 1px !important; }
 	background: var(--amber) !important; border-color: var(--amber) !important; color: var(--amber-ink) !important; }
 .button.is-dark { background: var(--cab-2) !important; border-color: var(--cab-2) !important; }
 .button.is-small { min-height: 36px; font-size: var(--t1) !important; padding: 0 14px !important; }
-.button.is-danger { color: var(--bad) !important; border-color: rgba(239,106,82,.5) !important; background: transparent !important; }
+.button.is-danger { color: var(--bad) !important; border-color: color-mix(in srgb, var(--bad) 50%, transparent) !important; background: transparent !important; }
 .input, .textarea, .select select, select, input[type=text], input[type=search], .ui-autocomplete-input {
 	background: var(--cab-2) !important; color: var(--print) !important; border: 1px solid transparent !important;
 	border-radius: 12px !important; box-shadow: none !important; min-height: 48px; font: 400 var(--t3) var(--sans) !important; }
@@ -86,8 +96,8 @@ input[type=checkbox]:checked::after { content: ""; width: 9px; height: 5px; bord
 
 /* sliders: an amber scale and the red needle as the thumb */
 input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 36px; }
-input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(242,181,68,.5), rgba(242,181,68,.2)); }
-input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(242,181,68,.5), rgba(242,181,68,.2)); }
+input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--amber) 50%, transparent), color-mix(in srgb, var(--amber) 20%, transparent)); }
+input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--amber) 50%, transparent), color-mix(in srgb, var(--amber) 20%, transparent)); }
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 28px; margin-top: -11px; border-radius: 4px; background: var(--needle); border: 0; }
 input[type=range]::-moz-range-thumb { width: 8px; height: 28px; border-radius: 4px; background: var(--needle); border: 0; }
 
@@ -98,7 +108,7 @@ body rbutton { background: var(--amber) !important; background-image: none !impo
 body rbutton + rbutton { background: transparent !important; color: var(--print) !important; box-shadow: inset 0 0 0 1px var(--line) !important; }
 
 /* popups (welcome, voice search, admin login) */
-.dark_overlay { background: #0c0806 !important; opacity: .82 !important; }
+.dark_overlay { background: var(--overlay) !important; opacity: .82 !important; }
 .above_overlay { width: min(92%, 460px) !important; }
 .above_overlay .box { background: var(--cab) !important; border-radius: 20px !important; padding: 26px 22px 20px !important; }
 #welcomePanel h1 { font: 600 var(--t5)/1.15 var(--cond) !important; margin-bottom: .7em !important; }
@@ -133,20 +143,20 @@ body rbutton + rbutton { background: transparent !important; color: var(--print)
 #up-next { color: var(--print) !important; font-size: var(--t3); }
 .ohk-dial { margin: 12px 0 18px; }
 .ohk-glass { position: relative; height: 112px; border-radius: 12px; overflow-x: auto; overflow-y: hidden;
-	background: radial-gradient(130% 160% at 35% 125%, #6a4512 0%, #3d2711 42%, #1f150d 100%); scrollbar-width: none; }
+	background: var(--glass); scrollbar-width: none; }
 .ohk-glass::-webkit-scrollbar { display: none; }
 .ohk-track { position: relative; height: 100%; min-width: 100%; }
 .ohk-scale { position: absolute; left: 0; right: 0; top: 12px; height: 22px;
-	background: repeating-linear-gradient(90deg, rgba(241,227,196,.75) 0 2px, transparent 2px var(--min)),
-	            repeating-linear-gradient(90deg, rgba(241,227,196,.3) 0 1px, transparent 1px calc(var(--min) / 4));
+	background: repeating-linear-gradient(90deg, var(--tick) 0 2px, transparent 2px var(--min)),
+	            repeating-linear-gradient(90deg, var(--tick-minor) 0 1px, transparent 1px calc(var(--min) / 4));
 	background-size: 100% 22px, 100% 12px; background-repeat: no-repeat; }
-.ohk-lit { position: absolute; left: 0; top: 12px; height: 22px; background: linear-gradient(90deg, rgba(242,181,68,0), rgba(242,181,68,.3)); }
+.ohk-lit { position: absolute; left: 0; top: 12px; height: 22px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--amber) 30%, transparent)); }
 .ohk-seg { position: absolute; bottom: 12px; height: 46px; padding: 0 8px; border-left: 2px solid currentColor; display: flex;
 	flex-direction: column; justify-content: flex-end; overflow: hidden; }
 .ohk-seg::after { content: ""; position: absolute; left: 0; right: 3px; bottom: 0; height: 4px; border-radius: 0 3px 3px 0; background: currentColor; opacity: .55; }
 .ohk-seg b { font: 600 var(--t2)/1.1 var(--cond); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ohk-seg span { font: 400 var(--t1)/1.2 var(--sans); color: var(--print); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
-.ohk-seg b, .ohk-seg span { text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.ohk-seg b, .ohk-seg span { text-shadow: var(--seg-shadow); }
 .ohk-seg { z-index: 2; }
 .ohk-needle { position: absolute; z-index: 1; top: 6px; bottom: 6px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle); transition: left .5s linear; }
 .ohk-hint { font: 500 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-top: 6px; }
@@ -192,8 +202,10 @@ select option { background: var(--cab-2); color: var(--print); }
 #lyrics-title { color: var(--amber) !important; font-family: var(--cond) !important; font-size: var(--t4) !important; }
 .lyrics-line { font-family: var(--sans) !important; color: var(--print) !important; }
 #lyrics-body.is-synced .lyrics-line { color: var(--faint) !important; }
-#lyrics-body.is-synced .lyrics-line.is-past { color: #7a6650 !important; }
-#lyrics-body.is-synced .lyrics-line.is-active { color: var(--amber) !important; }
+#lyrics-body.is-synced .lyrics-line.is-past { color: var(--lyric-past) !important; }
+#lyrics-body.is-synced .lyrics-line.is-active { color: var(--lyric-active) !important; }
+#lyrics-sync-wrap, #lyrics-close { color: var(--dim) !important; }
+#lyrics-sync { accent-color: var(--amber) !important; }
 
 @media (prefers-reduced-motion: reduce) {
 	.ohk-needle { transition: none; }
