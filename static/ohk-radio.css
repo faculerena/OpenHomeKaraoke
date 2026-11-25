@@ -45,7 +45,7 @@ hr { background: var(--line) !important; height: 1px !important; }
 .navbar-item > span { font: 500 var(--t2) var(--cond); letter-spacing: .08em; text-transform: uppercase; margin-left: 4px; }
 .navbar-burger { color: var(--dim) !important; height: 60px; width: 56px; }
 .navbar-burger:hover { background: transparent !important; color: var(--print) !important; }
-.navbar-menu { background: var(--cab) !important; box-shadow: none !important; border-bottom: 1px solid var(--line); }
+.navbar-menu { background: var(--cab) !important; box-shadow: none !important; border-bottom: 1px solid var(--line); padding: 6px 10px 10px !important; }
 .navbar-menu .navbar-item { justify-content: flex-start; padding: 14px 18px !important; min-height: 52px; }
 
 /* ---- page frame: the cabinet ---------------------------------------------------------- */
