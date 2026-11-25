@@ -146,6 +146,38 @@ form.settings .check { flex-direction: row; align-items: center; gap: 8px; }
 .preview .pinput { border: 1px solid #ccc; border-radius: 6px; height: 30px; margin-top: 4px; }
 .preview-tag { font-size: 12px; color: var(--faint); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .8px; }
 
+/* tabs */
+.tabs { display: inline-flex; gap: 4px; margin-left: 12px; }
+.tabs a { padding: 6px 12px; border-radius: 8px; color: var(--dim); text-decoration: none; font-weight: 600; font-size: 14px; }
+.tabs a.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+main[hidden] { display: none; }
+
+/* song list */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.toolbar input[type=search], .toolbar select { background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+	padding: 8px 10px; color: var(--text); }
+.toolbar input[type=search] { flex: 1; min-width: 200px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 999px;
+	padding: 4px 11px; font-size: 13px; cursor: pointer; }
+.chip.on { background: var(--panel-2); color: var(--text); border-color: var(--faint); }
+.chip b { color: var(--faint); font-weight: 600; margin-left: 4px; }
+.count { color: var(--faint); font-size: 13px; margin-left: auto; }
+.song { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; padding: 11px 2px; border-top: 1px solid var(--line); align-items: center; }
+.song .t { font-weight: 600; overflow-wrap: anywhere; }
+.song .m { color: var(--faint); font-size: 12px; overflow-wrap: anywhere; }
+.song .badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.badge { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
+.badge.good { color: var(--ok); border-color: rgba(62,207,142,.35); }
+.badge.warn { color: var(--warn); border-color: rgba(245,185,66,.35); }
+.badge.hot { color: #fff; background: var(--accent-strong); border-color: var(--accent-strong); }
+.song .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.song input.rename { background: var(--bg); border: 1px solid var(--accent); border-radius: 7px; padding: 5px 8px;
+	color: var(--text); font: inherit; font-weight: 600; width: 100%; }
+@media (max-width: 700px) { .song { grid-template-columns: 1fr; } .song .acts { justify-content: flex-start; } }
+.batch { border-top: 1px solid var(--line); padding: 10px 0; }
+.batch:first-child { border-top: 0; }
+
 /* logs */
 #logs { position: fixed; inset: auto 0 0 0; height: 55vh; background: #0b0d10; border-top: 1px solid var(--line);
 	z-index: 20; display: none; flex-direction: column; }
@@ -166,11 +198,12 @@ form.settings .check { flex-direction: row; align-items: center; gap: 8px; }
 <header>
 	<div class="brand">Open<span>Home</span>Karaoke</div>
 	<div class="host" id="host"></div>
+	<nav class="tabs"><a href="#overview" data-tab="overview">Overview</a><a href="#library" data-tab="library">Library</a></nav>
 	<div class="spacer"></div>
 	<div class="mode-pill" id="modepill">stopped</div>
 </header>
 
-<main>
+<main id="tab-overview">
 	<section class="card wide">
 		<div class="control">
 			<div class="modes" id="modes">
@@ -199,10 +232,6 @@ form.settings .check { flex-direction: row; align-items: center; gap: 8px; }
 		<div id="activity"><p class="empty">Not running.</p></div>
 	</section>
 
-	<section class="card">
-		<h2>Library <button class="btn small act" id="librefresh">rescan</button></h2>
-		<div id="library"><p class="empty">Scanning…</p></div>
-	</section>
 
 	<section class="card">
 		<h2>Updates <button class="btn small act" id="fetch">check now</button></h2>
@@ -239,6 +268,34 @@ form.settings .check { flex-direction: row; align-items: center; gap: 8px; }
 			<span class="hint" id="settingshint">Changes apply the next time karaoke starts.</span>
 		</div>
 		<div class="msg" id="setmsg"></div>
+	</section>
+</main>
+
+<main id="tab-library" hidden>
+	<section class="card">
+		<h2>Maintenance <button class="btn small act" id="librefresh">rescan</button></h2>
+		<div id="library"><p class="empty">Scanning…</p></div>
+	</section>
+
+	<section class="card">
+		<h2>Trash <button class="btn small act" id="trashrefresh">refresh</button></h2>
+		<div id="trash"><p class="empty">Loading…</p></div>
+	</section>
+
+	<section class="card wide">
+		<h2>Songs <button class="btn small act" id="songsrefresh">rescan</button></h2>
+		<div class="toolbar">
+			<input type="search" id="songq" placeholder="Search title or ID" autocomplete="off">
+			<select id="songsort">
+				<option value="title">Title A-Z</option>
+				<option value="added">Recently added</option>
+				<option value="size">Largest</option>
+				<option value="duration">Longest</option>
+			</select>
+		</div>
+		<div class="toolbar"><div class="chips" id="songfilters"></div><span class="count" id="songcount"></span></div>
+		<div class="msg" id="songmsg"></div>
+		<div id="songs"><p class="empty">Loading…</p></div>
 	</section>
 </main>
 
@@ -365,7 +422,15 @@ function paintActivity(act) {
 }
 
 const jobBtns = {};
+let splitPrev = null;
 function paintJobs(jobs) {
+	if (jobs.split) {
+		if (splitPrev === 'running' && jobs.split.state !== 'running') {
+			songMsg(jobs.split.state === 'done' ? 'Split finished.' : 'Split failed: see its log in the panel log.', jobs.split.state === 'done' ? 'info' : 'err');
+			loadSongs();
+		}
+		splitPrev = jobs.split.state;
+	}
 	for (const [name, j] of Object.entries(jobs)) {
 		const el = document.getElementById('job-' + name);
 		if (!el) continue;
@@ -407,7 +472,7 @@ async function loadLibrary() {
 	if (L.error) { box.replaceChildren(h('p', {class: 'empty'}, L.error)); return; }
 	const stat = (n, label, warn) => h('div', {class: 'stat' + (warn && n ? ' warn' : '')}, h('b', {}, n), h('small', {}, label));
 	const kids = [h('div', {class: 'stats'},
-		stat(L.songs, 'songs'), stat(L.missing_stems.length, 'no vocal stems', 1),
+		stat(L.songs, 'songs in the app'), stat(L.missing_stems.length, 'no vocal stems', 1),
 		stat(L.missing_colorwipe.length, 'no color-wipe', 1), stat(L.cleanable.length, `leftovers · ${L.size_mb} MB`, 1))];
 	kids.push(h('div', {class: 'row'}, jobButton('presplit', 'Pre-split vocals')),
 		h('div', {class: 'row', style: 'margin-top:8px'}, jobButton('gen-missing', 'Generate missing color-wipes')));
@@ -422,7 +487,7 @@ async function loadLibrary() {
 				if (!files.length) return;
 				const r = await post('/api/library/cleanup', {files});
 				alertIn(box, r.error || `Moved ${r.moved.length} files to ${r.trash}`);
-				setTimeout(loadLibrary, 300);
+				setTimeout(() => { loadLibrary(); loadTrash(); }, 300);
 			}}, 'Move selected to trash')));
 	}
 	const notes = [];
@@ -529,6 +594,135 @@ $('#w-save').addEventListener('click', async () => {
 	say($('#w-msg'), r.error || 'Saved. Phones see it on their next page load.', r.error ? 'err' : 'info');
 });
 
+// ---- tabs ---------------------------------------------------------------------------
+function showTab() {
+	const tab = location.hash === '#library' ? 'library' : 'overview';
+	document.querySelectorAll('[data-tab]').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
+	$('#tab-overview').hidden = tab !== 'overview';
+	$('#tab-library').hidden = tab !== 'library';
+	if (tab === 'library') { loadSongs(); loadTrash(); loadLibrary(); }
+}
+window.addEventListener('hashchange', showTab);
+
+// ---- songs ----------------------------------------------------------------------------
+let SONGS = null, songFilter = 'all';
+const FILTERS = [
+	['all', 'All', () => true],
+	['nowipe', 'No color-wipe', s => !s.colorwipe],
+	['nostems', 'No stems', s => !s.stems],
+	['mugen', 'Karaoke Mugen', s => s.colorwipe === 'karaoke-mugen'],
+	['dup', 'Downloaded twice', s => s.duplicate],
+	['hidden', 'Hidden from app', s => s.hidden],
+];
+function mmss(sec) { return sec == null ? '' : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }
+function songMsg(text, kind) { say($('#songmsg'), text, kind); if (text) setTimeout(() => say($('#songmsg'), ''), 7000); }
+
+async function loadSongs() {
+	SONGS = await api('/api/songs');
+	paintSongs();
+}
+async function songAction(url, name, extra, okText) {
+	const r = await post(url, Object.assign({name}, extra || {}));
+	songMsg(r.error || okText(r), r.error ? 'err' : 'info');
+	if (!r.error) { await loadSongs(); loadTrash(); loadLibrary(); }
+	return r;
+}
+function paintSongs() {
+	if (!SONGS) return;
+	const list = SONGS.songs, q = $('#songq').value.trim().toLowerCase();
+	$('#songfilters').replaceChildren(...FILTERS.map(([key, label, fn]) => h('button', {
+		class: 'chip' + (songFilter === key ? ' on' : ''), onclick: () => { songFilter = key; paintSongs(); }},
+		label, h('b', {}, list.filter(fn).length))));
+	const fn = FILTERS.find(f => f[0] === songFilter)[2];
+	const sort = $('#songsort').value;
+	const shown = list.filter(fn).filter(s => !q || s.title.toLowerCase().includes(q) || s.id.toLowerCase().includes(q))
+		.sort((a, b) => sort === 'title' ? a.title.localeCompare(b.title, undefined, {sensitivity: 'base'})
+			: sort === 'added' ? b.added - a.added : sort === 'size' ? b.size_mb - a.size_mb : (b.duration || 0) - (a.duration || 0));
+	$('#songcount').textContent = `${shown.length} of ${list.length}`;
+	const box = $('#songs');
+	if (!shown.length) { box.replaceChildren(h('p', {class: 'empty'}, 'No songs match.')); return; }
+	box.replaceChildren(...shown.map(songRow));
+}
+function songRow(s) {
+	const playing = SONGS.playing === s.name, queued = SONGS.queued.includes(s.name);
+	const title = h('div', {class: 't'}, s.title);
+	const meta = h('div', {class: 'm'}, [s.id, s.ext, mmss(s.duration), `${s.size_mb} MB`,
+		'added ' + new Date(s.added * 1000).toLocaleDateString()].filter(Boolean).join(' · '));
+	const badges = h('div', {class: 'badges'},
+		playing ? h('span', {class: 'badge hot'}, 'playing') : null,
+		queued ? h('span', {class: 'badge hot'}, 'queued') : null,
+		s.colorwipe === 'karaoke-mugen' ? h('span', {class: 'badge good'}, 'Karaoke Mugen wipe')
+			: s.colorwipe ? h('span', {class: 'badge good'}, 'color-wipe') : h('span', {class: 'badge warn'}, 'no color-wipe'),
+		s.stems ? h('span', {class: 'badge good'}, 'stems') : h('span', {class: 'badge warn'}, 'no stems'),
+		s.romaji ? h('span', {class: 'badge'}, 'romaji') : null,
+		s.duplicate ? h('span', {class: 'badge warn'}, 'downloaded twice') : null,
+		s.hidden ? h('span', {class: 'badge warn'}, 'hidden from app: rename to fix') : null);
+	const left = h('div', {}, title, meta, badges);
+	const locked = playing || queued;
+	const btn = (label, onclick, opts) => h('button', Object.assign({class: 'btn small', onclick}, opts || {}), label);
+
+	const del = btn('Delete', () => {
+		if (del.dataset.armed) {
+			songAction('/api/songs/delete', s.name, {}, r => `Moved ${r.moved.length} file(s) to the trash.`);
+		} else {
+			del.dataset.armed = '1'; del.textContent = 'Confirm delete'; del.classList.add('danger');
+			setTimeout(() => { delete del.dataset.armed; del.textContent = 'Delete'; del.classList.remove('danger'); }, 4000);
+		}
+	}, {disabled: locked, title: locked ? 'Playing or queued' : 'Moves the song and its files to the trash'});
+
+	const rename = btn('Rename', () => {
+		const input = h('input', {class: 'rename', value: s.title.replace(/^\.+/, '')});
+		const done = async (save) => {
+			if (save && input.value.trim() && input.value.trim() !== s.title)
+				await songAction('/api/songs/rename', s.name, {title: input.value}, r => `Renamed to ${r.name}`);
+			else paintSongs();
+		};
+		input.addEventListener('keydown', e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); });
+		input.addEventListener('blur', () => done(true));
+		title.replaceWith(input); input.focus(); input.select();
+	}, {disabled: locked});
+
+	const acts = h('div', {class: 'acts'},
+		btn('Queue', () => songAction('/api/songs/queue', s.name, {}, () => `Queued ${s.title}.`),
+			{disabled: !SONGS.app_running || queued, title: SONGS.app_running ? 'Add to the karaoke queue' : 'Karaoke is not running'}),
+		btn(s.colorwipe ? 'Rebuild wipe' : 'Make wipe', () => songAction('/api/songs/colorwipe', s.name, {},
+			() => 'Color-wipe build queued on the GPU (see Overview → Now).'),
+			{title: s.colorwipe === 'karaoke-mugen' ? 'Replaces the hand-timed Karaoke Mugen lyrics with an automatic one' : 'Real lyrics, force-aligned to the vocals'}),
+		btn(s.stems ? 'Re-split' : 'Split', () => songAction('/api/songs/split', s.name, {}, () => 'Splitting on the GPU…'),
+			{title: 'Separate vocals and music again'}),
+		rename, del);
+	return h('div', {class: 'song'}, left, acts);
+}
+$('#songq').addEventListener('input', paintSongs);
+$('#songsort').addEventListener('change', paintSongs);
+$('#songsrefresh').addEventListener('click', loadSongs);
+
+// ---- trash ----------------------------------------------------------------------------
+async function loadTrash() {
+	const T = await api('/api/trash'), box = $('#trash');
+	if (!T.batches.length) { box.replaceChildren(h('p', {class: 'empty'}, 'Empty. Deleted songs and cleaned-up files land here first.')); return; }
+	box.replaceChildren(...T.batches.map(b => {
+		const forget = h('button', {class: 'btn small danger', onclick: async () => {
+			if (!forget.dataset.armed) {
+				forget.dataset.armed = '1'; forget.textContent = 'Really delete forever';
+				setTimeout(() => { delete forget.dataset.armed; forget.textContent = 'Delete forever'; }, 4000);
+				return;
+			}
+			const r = await post('/api/trash/empty', {batch: b.id}); if (r.error) alertIn(box, r.error); loadTrash();
+		}}, 'Delete forever');
+		return h('div', {class: 'batch'},
+			h('div', {}, h('b', {}, new Date(b.when * 1000).toLocaleString()), ` · ${b.files.length} file(s) · ${b.size_mb} MB`),
+			h('details', {}, h('summary', {}, 'files'), h('div', {class: 'filelist'}, b.files.map(f => h('div', {}, f)))),
+			h('div', {class: 'row', style: 'margin-top:6px'},
+				h('button', {class: 'btn small', onclick: async () => {
+					const r = await post('/api/trash/restore', {batch: b.id});
+					alertIn(box, r.error || (r.skipped.length ? `Restored ${r.restored.length}; ${r.skipped.length} skipped (already exist)` : `Restored ${r.restored.length} file(s).`));
+					loadTrash(); loadSongs(); loadLibrary();
+				}}, 'Restore'), forget));
+	}));
+}
+$('#trashrefresh').addEventListener('click', loadTrash);
+
 // ---- logs -----------------------------------------------------------------------------
 let logUnit = null;
 async function showLog(unit) {
@@ -543,7 +737,7 @@ $('#logclose').addEventListener('click', () => $('#logs').classList.remove('open
 $('#logrefresh').addEventListener('click', () => logUnit && showLog(logUnit));
 
 tick(); setInterval(tick, 2000);
-loadLibrary(); loadUpdates(); loadSettings(); loadWelcome();
+loadUpdates(); loadSettings(); loadWelcome(); showTab();
 </script>
 </body>
 </html>

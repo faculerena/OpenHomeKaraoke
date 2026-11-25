@@ -700,12 +700,19 @@ class Karaoke:
 	def get_all_assoc_files(self, song_path):
 		basename = os.path.basename(song_path)
 		basestem = os.path.splitext(basename)
-		return [self.download_path + basename,
+		files = [self.download_path + basename,
 				self.download_path + basestem[0] + '.cdg',
 				self.download_path + 'nonvocal/' + basename + '.m4a',
 				self.download_path + 'nonvocal/.' + basename + '.m4a',
 				self.download_path + 'vocal/' + basename + '.m4a',
 				self.download_path + 'vocal/.' + basename + '.m4a']
+		# Subtitle sidecars (color-wipe .ass, romaji, lyrics) go with the song too, or deleting
+		# and renaming leaves them orphaned. They belong to the STEM, though, which a second
+		# download of the same song in another format can share: then leave them to that one.
+		# Appended last so rename()'s zip(old, new) pairing of the lists above is unaffected.
+		if not any(os.path.isfile(self.download_path + basestem[0] + e) for e in media_types if e != basestem[1]):
+			files += [self.download_path + basestem[0] + e for e in ('.ass', '.ssa', '.romaji.srt', '.srt', '.vtt', '.lrc')]
+		return files
 
 	def delete_if_exist(self, filename):
 		if os.path.isfile(filename):

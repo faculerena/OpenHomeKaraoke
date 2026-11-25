@@ -49,5 +49,46 @@ def gen_missing():
 	      '(usually: no synced lyrics found for that song)', flush = True)
 
 
+def split(name):
+	"""(Re)generate one song's vocal/nonvocal stems through the GPU server, replacing any
+	old ones only once the new pair is ready (the old ones go to the trash)."""
+	import shutil
+	import subprocess
+	import tarfile
+	import tempfile
+	cfg = C.load()
+	root = C.song_dir(cfg)
+	media = os.path.join(root, name)
+	print(f'splitting {name}', flush = True)
+	with tempfile.TemporaryDirectory(prefix = 'ohk_split_') as t:
+		# matroska: YouTube audio is often opus, which an .m4a container can't hold;
+		# 'file:' stops ffmpeg reading a ':' in the title as a protocol
+		subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', 'file:' + media, '-vn', '-c', 'copy',
+		                '-f', 'matroska', f'{t}/in.m4a'], check = True)
+		import uuid
+		boundary = uuid.uuid4().hex
+		audio = open(f'{t}/in.m4a', 'rb').read()
+		body = (f'--{boundary}\r\nContent-Disposition: form-data; name="name"\r\n\r\n{name}\r\n'
+		        f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="in.m4a"\r\n'
+		        'Content-Type: application/octet-stream\r\n\r\n').encode() + audio + f'\r\n--{boundary}--\r\n'.encode()
+		req = urllib.request.Request(f"http://127.0.0.1:{cfg['asr_port']}/split_vocal", data = body,
+		                             headers = {'Content-Type': f'multipart/form-data; boundary={boundary}'})
+		with urllib.request.urlopen(req, timeout = 1800) as r, open(f'{t}/out.tgz', 'wb') as f:
+			f.write(r.read())
+		with tarfile.open(f'{t}/out.tgz') as tar:
+			tar.extractall(t, filter = 'data')
+		old = [f'{sub}/{name}.m4a' for sub in ('vocal', 'nonvocal') if os.path.isfile(os.path.join(root, sub, f'{name}.m4a'))]
+		if old:
+			library._move(root, old, library._trash_batch())
+		for sub in ('vocal', 'nonvocal'):
+			os.makedirs(os.path.join(root, sub), exist_ok = True)
+			shutil.move(f'{t}/{sub}.m4a', os.path.join(root, sub, f'{name}.m4a'))
+	print('done', flush = True)
+
+
 if __name__ == '__main__':
-	{'gen-missing': gen_missing}[sys.argv[1]]()
+	cmd = sys.argv[1]
+	if cmd == 'split':
+		split(sys.argv[2])
+	else:
+		{'gen-missing': gen_missing}[cmd]()

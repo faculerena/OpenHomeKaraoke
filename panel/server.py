@@ -20,6 +20,8 @@ import socket
 import subprocess
 import threading
 import time
+import urllib.parse
+import urllib.request
 
 from flask import Flask, abort, jsonify, request, send_from_directory
 from werkzeug.serving import make_server
@@ -31,6 +33,7 @@ STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 app = Flask(__name__, static_folder = None)
 
 JOBS = {
+	'split':        'Re-split one song',
 	'presplit':     'Pre-split vocals for every song',
 	'gen-missing':  'Generate missing color-wipes',
 	'ytdlp-update': 'Update yt-dlp',
@@ -279,6 +282,148 @@ def api_cleanup():
 	if not isinstance(files, list):
 		return result('files must be a list')
 	return jsonify(ok = True, **library.cleanup([str(f) for f in files], _downloads_active()))
+
+
+# ---- per-song management (Library tab) -------------------------------------------------
+def _app_status():
+	return S.http_json(f'http://127.0.0.1:{C.APP_PORT}/ohk_status')
+
+
+def _busy(name):
+	"""Why a song can't be touched right now (playing / queued), or None."""
+	st = _app_status()
+	if not st:
+		return None
+	title = library.split_name(name)[0]
+	# an app started before /ohk_status reported file names only gives titles: match on those
+	if st.get('now_playing_file') == name or (not st.get('now_playing_file') and st.get('now_playing') == title):
+		return 'That song is playing right now.'
+	if any(q.get('file') == name or ('file' not in q and q['title'] == title) for q in st['queue']):
+		return 'That song is in the queue: remove it there first.'
+	return None
+
+
+def _app_rescan():
+	"""Make a running app re-read the song folder (its /refresh is admin-only)."""
+	if not _app_status():
+		return
+	pw = C.load()['admin_password']
+	req = urllib.request.Request(f'http://127.0.0.1:{C.APP_PORT}/refresh',
+	                             headers = {'Cookie': f'admin={pw}'} if pw else {})
+	try:
+		urllib.request.urlopen(req, timeout = 10).read()
+	except Exception:
+		pass
+
+
+def _song_arg():
+	name = str(body().get('name') or '')
+	if not name or '/' in name or name in ('.', '..'):
+		abort(400)
+	return name
+
+
+@app.get('/api/songs')
+def api_songs():
+	out = library.songs()
+	st = _app_status() or {}
+	out['playing'] = st.get('now_playing_file')
+	out['queued'] = [q.get('file') for q in st.get('queue', [])]
+	out['app_running'] = bool(st)
+	return jsonify(out)
+
+
+@app.post('/api/songs/delete')
+def api_song_delete():
+	name = _song_arg()
+	err = _busy(name)
+	if err:
+		return result(err)
+	res, err = library.delete_song(name)
+	if not err:
+		_app_rescan()
+	return result(err, **(res or {}))
+
+
+@app.post('/api/songs/rename')
+def api_song_rename():
+	name = _song_arg()
+	err = _busy(name)
+	if err:
+		return result(err)
+	res, err = library.rename_song(name, body().get('title', ''))
+	if not err:
+		_app_rescan()
+	return result(err, **(res or {}))
+
+
+@app.post('/api/songs/queue')
+def api_song_queue():
+	name = _song_arg()
+	if not _app_status():
+		return result('Karaoke is not running.')
+	path = os.path.join(C.song_dir(C.load()), name)
+	if not os.path.isfile(path):
+		return result('no such song')
+	q = urllib.parse.urlencode({'song': path, 'user': 'Panel'})
+	try:
+		r = json.loads(urllib.request.urlopen(f'http://127.0.0.1:{C.APP_PORT}/enqueue?{q}', timeout = 10).read())
+	except Exception as e:
+		return result(f'enqueue failed: {e}')
+	return result(None if r.get('success') else 'Already in the queue.')
+
+
+@app.post('/api/songs/colorwipe')
+def api_song_colorwipe():
+	"""Rebuild one song's color-wipe: the old .ass goes to the trash first (the GPU server
+	skips songs that already have one)."""
+	name = _song_arg()
+	cfg = C.load()
+	if S.http_json(f"http://127.0.0.1:{cfg['asr_port']}/status") is None:
+		return result('Needs the voice/GPU server: start karaoke first.')
+	root = C.song_dir(cfg)
+	path = os.path.join(root, name)
+	if not os.path.isfile(path):
+		return result('no such song')
+	stem = os.path.splitext(name)[0]
+	old = [f for f in (stem + '.ass', stem + '.ssa') if os.path.isfile(os.path.join(root, f))]
+	if old:
+		library._move(root, old, library._trash_batch())
+	data = urllib.parse.urlencode({'path': path}).encode()
+	try:
+		urllib.request.urlopen(f"http://127.0.0.1:{cfg['asr_port']}/make_karaoke", data = data, timeout = 10).read()
+	except Exception as e:
+		return result(f'could not queue the build: {e}')
+	return result(None, replaced = old)
+
+
+@app.post('/api/songs/split')
+def api_song_split():
+	name = _song_arg()
+	cfg = C.load()
+	if S.http_json(f"http://127.0.0.1:{cfg['asr_port']}/status") is None:
+		return result('Needs the voice/GPU server: start karaoke first.')
+	if not os.path.isfile(os.path.join(C.song_dir(cfg), name)):
+		return result('no such song')
+	return result(S.run_job('split', [C.PY, '-m', 'panel.jobs', 'split', name]))
+
+
+@app.get('/api/trash')
+def api_trash():
+	return jsonify(batches = library.trash_batches())
+
+
+@app.post('/api/trash/restore')
+def api_trash_restore():
+	res, err = library.restore_batch(str(body().get('batch') or ''))
+	if not err:
+		_app_rescan()
+	return result(err, **(res or {}))
+
+
+@app.post('/api/trash/empty')
+def api_trash_empty():
+	return result(library.empty_batch(str(body().get('batch') or '')))
 
 
 @app.post('/api/jobs/<name>')
