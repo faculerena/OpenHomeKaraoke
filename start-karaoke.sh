@@ -88,6 +88,10 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
 	echo "  stop:    tmux kill-session -t $SESSION"
 	exit 1
 fi
+if systemctl --user is-active --quiet ohk-asr.service ohk-app.service ohk-app-tv.service 2>/dev/null; then
+	echo "Karaoke is already running under the admin panel (scripts/ohk-panel). Stop it there first." >&2
+	exit 1
+fi
 if pgrep -f "$PWD/.venv/bin/python app.py" >/dev/null 2>&1; then
 	echo "An app.py is already running outside tmux. Stop it first, then re-run." >&2
 	exit 1

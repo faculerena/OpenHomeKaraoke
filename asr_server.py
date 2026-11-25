@@ -35,11 +35,47 @@ gen_lock = threading.Lock()      # serialize karaoke .ass generation (one heavy 
 jobs = {}                        # remote karaoke jobs: id -> {'state': pending|done|error, 'dir': tmpdir}
 jobs_lock = threading.Lock()
 
+# What the GPU is busy with, for the admin panel's /status (names are song filenames).
+# karaoke_waiting counts builds queued behind gen_lock; the panel shows it as a backlog.
+activity = {'split': None, 'karaoke': None, 'karaoke_waiting': 0, 'asr_running': 0}
+activity_lock = threading.Lock()
+
+
+class _doing:
+	"""with _doing('split', name): mark the GPU as busy with `name` for the duration."""
+	def __init__(self, kind, name):
+		self.kind, self.name = kind, name
+	def __enter__(self):
+		with activity_lock:
+			activity[self.kind] = self.name
+	def __exit__(self, *exc):
+		with activity_lock:
+			activity[self.kind] = None
+
+
+class _gen_slot:
+	"""with _gen_slot(name): take gen_lock (one heavy build at a time, avoids GPU OOM under
+	bursts), counting the wait as backlog and the hold as the build in progress."""
+	def __init__(self, name):
+		self.name = name
+	def __enter__(self):
+		with activity_lock:
+			activity['karaoke_waiting'] += 1
+		gen_lock.acquire()
+		with activity_lock:
+			activity['karaoke_waiting'] -= 1
+			activity['karaoke'] = self.name
+	def __exit__(self, *exc):
+		with activity_lock:
+			activity['karaoke'] = None
+		gen_lock.release()
+
 
 def load_models(args):
 	G.device = torch.device(f'cuda:{args.gpu}') if (args.gpu >= 0 and torch.cuda.is_available()) else torch.device('cpu')
 	print(f'Loading Whisper "{args.model}" on {G.device} ...', flush=True)
 	G.whisper = whisper.load_model(args.model, device=G.device)
+	G.model_name = args.model
 
 	print('Loading vocal-remover DNN (models/baseline.pth) ...', flush=True)
 	vmodel = nets.CascadedNet(2048, 1024, 32, 128, True)
@@ -51,6 +87,19 @@ def load_models(args):
 	print(f'Ready. GPU mem: {round(torch.cuda.memory_allocated()/1e6,1)} MB', flush=True)
 
 
+@app.route('/status')
+def status():
+	# Read by the admin panel (panel/). Local-only like the rest of this server.
+	with activity_lock:
+		act = dict(activity)
+	gpu_mb = None
+	if G.device.type == 'cuda':
+		try: gpu_mb = round(torch.cuda.memory_allocated() / 1e6)
+		except Exception: pass
+	return jsonify({'ready': True, 'model': G.model_name, 'device': str(G.device),
+	                'gpu_mem_mb': gpu_mb, 'activity': act})
+
+
 @app.route('/run_asr', methods=['POST'])
 def run_asr():
 	f = request.files.get('file') or (request.data and SimpleNamespace(save=lambda p: open(p, 'wb').write(request.data)))
@@ -60,8 +109,14 @@ def run_asr():
 		path = tmp.name
 	f.save(path)
 	try:
-		with asr_lock:
-			res = G.whisper.transcribe(path, fp16=(G.device.type == 'cuda'))
+		with activity_lock:
+			activity['asr_running'] += 1
+		try:
+			with asr_lock:
+				res = G.whisper.transcribe(path, fp16=(G.device.type == 'cuda'))
+		finally:
+			with activity_lock:
+				activity['asr_running'] -= 1
 		return jsonify({'text': (res.get('text') or '').strip(), 'language': res.get('language', '')})
 	except Exception as e:
 		print(f'ASR error: {e}', file=sys.stderr, flush=True)
@@ -83,7 +138,7 @@ def split_vocal():
 	try:
 		f.save(in_m4a)
 		VS.ffm_video2wav(in_m4a, in_wav)
-		with split_lock:
+		with split_lock, _doing('split', os.path.basename(f.filename or 'song')):
 			VS.split_vocal_by_dnn(in_wav, nv_wav, v_wav, G.split_args)
 		VS.ffm_wav2m4a(nv_wav, nv_m4a)
 		VS.ffm_wav2m4a(v_wav, v_m4a)
@@ -130,7 +185,7 @@ def _run_job(job, src, d):
 	"""Remote mode: split + align an uploaded song, then park the results for collection."""
 	state = 'error'
 	try:
-		with gen_lock:              # one heavy build at a time (avoids GPU OOM under bursts)
+		with _gen_slot(os.path.basename(src)):
 			vocal, nonvocal = f'{d}/vocal.m4a', f'{d}/nonvocal.m4a'
 			try:
 				_split(src, nonvocal, vocal)
@@ -178,7 +233,7 @@ def _split(media, nonvocal_m4a, vocal_m4a):
 	tmp = tempfile.mkdtemp(prefix='ohk_gk_')
 	try:
 		VS.ffm_video2wav(media, f'{tmp}/in.wav')
-		with split_lock:
+		with split_lock, _doing('split', os.path.basename(media)):
 			VS.split_vocal_by_dnn(f'{tmp}/in.wav', f'{tmp}/nv.wav', f'{tmp}/v.wav', G.split_args)
 		VS.ffm_wav2m4a(f'{tmp}/v.wav', vocal_m4a)
 		VS.ffm_wav2m4a(f'{tmp}/nv.wav', nonvocal_m4a)
@@ -202,7 +257,7 @@ def _gen_karaoke(media):
 	dst = os.path.splitext(media)[0] + '.ass'
 	if os.path.isfile(dst):
 		return
-	with gen_lock:                      # one karaoke build at a time (avoids GPU OOM under bursts)
+	with _gen_slot(os.path.basename(media)):
 		if os.path.isfile(dst):
 			return
 		try:
@@ -213,7 +268,7 @@ def _gen_karaoke(media):
 				try:
 					tmp = tempfile.mkdtemp(prefix='ohk_gk_')
 					VS.ffm_video2wav(media, tmp + '/in.wav')
-					with split_lock:
+					with split_lock, _doing('split', base):
 						VS.split_vocal_by_dnn(tmp + '/in.wav', tmp + '/nv.wav', tmp + '/v.wav', G.split_args)
 					VS.ffm_wav2m4a(tmp + '/v.wav', vocal)
 					shutil.rmtree(tmp, ignore_errors=True)

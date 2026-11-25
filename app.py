@@ -454,6 +454,28 @@ def lyrics():
 	return json.dumps(rc)
 
 
+@app.route("/ohk_status")
+def ohk_status():
+	# Live activity for the admin panel (panel/). Only what guests can already see in the web
+	# UI (now playing, the queue, the library size), plus background-work counts — so it is
+	# fine that this port is reachable from the LAN and, with the tunnel, from the internet.
+	s = K.get_state() if K.now_playing else {}
+	dl = [v for v in K.downloading_songs.values() if v == 1]
+	return json.dumps({
+		'now_playing': K.now_playing,
+		'now_playing_user': K.now_playing_user,
+		'is_paused': s.get('state') == 'paused' if K.now_playing else None,
+		'position': s.get('time'),
+		'length': s.get('length'),
+		'queue': [{'title': q['title'], 'user': q['user']} for q in K.queue],
+		'downloading': len(dl),
+		'vocal_split_pending': len(getattr(K, 'cloud_tasks', None) or []),
+		'songs': len(K.available_songs),
+		'url': K.url,
+		'tv_url': getattr(K, 'tv_url', None),
+	})
+
+
 @app.route("/restart")
 def restart():
 	K.restart()
@@ -1218,8 +1240,10 @@ if __name__ == "__main__":
 
 	set_language(args.lang)
 
-	if (args.admin_password):
-		admin_password = args.admin_password
+	# OHK_ADMIN_PASSWORD: how the admin panel's services pass it, so the password never
+	# appears in a command line (ps, the journal, the panel's log view).
+	if (args.admin_password or os.environ.get('OHK_ADMIN_PASSWORD')):
+		admin_password = args.admin_password or os.environ['OHK_ADMIN_PASSWORD']
 
 	app.jinja_env.globals.update(filename_from_path = filename_from_path)
 	app.jinja_env.globals.update(url_escape = quote)

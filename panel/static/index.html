@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karaoke Panel</title>
+<style>
+:root {
+	--bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --line: #2a2f3a;
+	--text: #e8eaee; --dim: #9aa3b2; --faint: #8a93a3;
+	--accent: #ff4f8b; --accent-strong: #c92a63; --accent-2: #ffb547;
+	--ok: #3ecf8e; --warn: #f5b942; --bad: #ff5d5d; --idle: #5b6472;
+	--radius: 12px;
+	color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+	font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--accent-2); }
+
+header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px;
+	padding: 14px 20px; background: rgba(15,17,21,.92); backdrop-filter: blur(8px);
+	border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.brand { font-weight: 700; letter-spacing: .2px; font-size: 17px; }
+.brand span { color: var(--accent); }
+.host { color: var(--faint); font-size: 13px; }
+.spacer { flex: 1; }
+.mode-pill { padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+	background: var(--panel-2); border: 1px solid var(--line); color: var(--dim); }
+.mode-pill.on { color: #0f1115; background: var(--ok); border-color: var(--ok); }
+
+main { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+	padding: 16px 18px; min-width: 0; }
+.card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .9px;
+	color: var(--dim); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.card h2 .act { margin-left: auto; }
+.wide { grid-column: 1 / -1; }
+
+/* control strip */
+.control { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.modes { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line);
+	border-radius: 10px; padding: 3px; gap: 3px; flex-wrap: wrap; }
+.modes button { border: 0; background: transparent; padding: 9px 14px; border-radius: 8px;
+	cursor: pointer; color: var(--dim); text-align: left; }
+.modes button b { display: block; color: var(--text); font-weight: 600; }
+.modes button small { font-size: 12px; }
+.modes button.sel { background: var(--bg); box-shadow: inset 0 0 0 1px var(--accent); }
+.modes button.sel b { color: var(--accent); }
+.btn { border: 1px solid var(--line); background: var(--panel-2); padding: 8px 14px;
+	border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--faint); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-weight: 600; }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 4px 10px; font-size: 13px; border-radius: 7px; }
+.big { padding: 12px 22px; font-size: 16px; }
+.msg { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 14px; display: none; }
+.msg.show { display: block; }
+.msg.err { background: rgba(255,93,93,.1); border: 1px solid rgba(255,93,93,.35); color: #ffb3b3; }
+.msg.info { background: rgba(245,185,66,.08); border: 1px solid rgba(245,185,66,.3); color: #f7d898; }
+
+/* services */
+.svc { display: grid; grid-template-columns: 12px 1fr auto; gap: 4px 12px; align-items: center;
+	padding: 10px 0; border-top: 1px solid var(--line); }
+.svc:first-of-type { border-top: 0; padding-top: 2px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--idle); }
+.dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(62,207,142,.15); }
+.dot.starting, .dot.stopping { background: var(--warn); animation: pulse 1.2s infinite; }
+.dot.degraded { background: var(--warn); }
+.dot.failed { background: var(--bad); }
+@keyframes pulse { 50% { opacity: .35; } }
+.svc .name { font-weight: 600; }
+.svc .meta { grid-column: 2 / 4; color: var(--dim); font-size: 13px; }
+.svc .err { grid-column: 2 / 4; color: #ffb3b3; font: 12px/1.4 ui-monospace, monospace;
+	background: rgba(255,93,93,.07); padding: 6px 8px; border-radius: 6px; overflow-wrap: anywhere; }
+.svc .btns { display: flex; gap: 6px; }
+
+/* join */
+.join { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.join .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+	padding: 10px; text-align: center; }
+.join img { width: 100%; max-width: 160px; background: #fff; border-radius: 6px; display: block; margin: 0 auto 8px; }
+.join .lbl { font-size: 13px; color: var(--dim); }
+.join .url { font: 12px ui-monospace, monospace; overflow-wrap: anywhere; }
+.links { margin-top: 10px; font-size: 13px; color: var(--dim); }
+.links div { overflow-wrap: anywhere; }
+
+/* activity */
+.np-title { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.np-user { color: var(--dim); font-size: 13px; }
+.bar { height: 6px; background: var(--panel-2); border-radius: 3px; margin: 10px 0 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+.times { display: flex; justify-content: space-between; color: var(--faint); font-size: 12px; }
+.queue { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: q; }
+.queue li { padding: 6px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; font-size: 14px; }
+.queue li::before { counter-increment: q; content: counter(q); color: var(--faint); width: 1.4em; text-align: right; }
+.queue li span { flex: 1; overflow-wrap: anywhere; }
+.queue li em { color: var(--faint); font-style: normal; font-size: 13px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin-top: 12px; font-size: 14px; }
+.kv dt { color: var(--dim); }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.empty { color: var(--faint); }
+
+/* library + updates */
+.stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 92px; }
+.stat b { display: block; font-size: 20px; }
+.stat small { color: var(--dim); font-size: 12px; }
+.stat.warn b { color: var(--warn); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.jobstate { font-size: 12px; color: var(--dim); }
+.jobstate.running { color: var(--warn); }
+.jobstate.failed { color: var(--bad); }
+.jobstate.done { color: var(--ok); }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--dim); font-size: 14px; }
+.filelist { max-height: 260px; overflow: auto; margin: 8px 0; font: 12px/1.5 ui-monospace, monospace;
+	background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.filelist label { display: flex; gap: 8px; align-items: flex-start; padding: 2px 0; overflow-wrap: anywhere; }
+.commits { font-size: 13px; margin: 6px 0 0; padding-left: 18px; color: var(--dim); }
+.commits code { color: var(--accent-2); }
+
+/* settings */
+form.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 16px; }
+form.settings label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--dim); }
+form.settings input, form.settings select { background: var(--bg); border: 1px solid var(--line);
+	border-radius: 8px; padding: 8px 10px; color: var(--text); min-width: 0; }
+form.settings .check { flex-direction: row; align-items: center; gap: 8px; }
+.hint { color: var(--faint); font-size: 12px; }
+
+/* logs */
+#logs { position: fixed; inset: auto 0 0 0; height: 55vh; background: #0b0d10; border-top: 1px solid var(--line);
+	z-index: 20; display: none; flex-direction: column; }
+#logs.open { display: flex; }
+#logs header { position: static; background: transparent; }
+#logs pre { flex: 1; margin: 0; padding: 12px 20px; overflow: auto; font: 12px/1.5 ui-monospace, monospace;
+	color: #c9d1dc; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 520px) {
+	main { padding: 12px; }
+	header { padding: 12px; }
+	.modes { width: 100%; }
+	.modes button { flex: 1; }
+}
+</style>
+</head>
+<body>
+<header>
+	<div class="brand">Open<span>Home</span>Karaoke</div>
+	<div class="host" id="host"></div>
+	<div class="spacer"></div>
+	<div class="mode-pill" id="modepill">stopped</div>
+</header>
+
+<main>
+	<section class="card wide">
+		<div class="control">
+			<div class="modes" id="modes">
+				<button data-mode="monitor"><b>This monitor</b><small>video on this PC's screen</small></button>
+				<button data-mode="tv"><b>TV stream</b><small>hidden here, open it on the TV</small></button>
+				<button data-mode="public"><b>Public</b><small>TV + guests from anywhere</small></button>
+			</div>
+			<button class="btn primary big" id="start">Start</button>
+			<button class="btn big" id="stop">Stop</button>
+		</div>
+		<div class="msg" id="ctlmsg"></div>
+	</section>
+
+	<section class="card">
+		<h2>Services <button class="btn small act" data-logs="panel">panel log</button></h2>
+		<div id="services"></div>
+	</section>
+
+	<section class="card">
+		<h2>Join</h2>
+		<div id="join"><p class="empty">Start karaoke to get the join links.</p></div>
+	</section>
+
+	<section class="card">
+		<h2>Now</h2>
+		<div id="activity"><p class="empty">Not running.</p></div>
+	</section>
+
+	<section class="card">
+		<h2>Library <button class="btn small act" id="librefresh">rescan</button></h2>
+		<div id="library"><p class="empty">Scanning…</p></div>
+	</section>
+
+	<section class="card">
+		<h2>Updates <button class="btn small act" id="fetch">check now</button></h2>
+		<div id="updates"><p class="empty">Loading…</p></div>
+	</section>
+
+	<section class="card wide">
+		<h2>Settings</h2>
+		<form class="settings" id="settings" autocomplete="off"></form>
+		<div class="row" style="margin-top:12px">
+			<button class="btn primary" id="savesettings">Save</button>
+			<span class="hint" id="settingshint">Changes apply the next time karaoke starts.</span>
+		</div>
+		<div class="msg" id="setmsg"></div>
+	</section>
+</main>
+
+<div id="logs">
+	<header><b id="logtitle">Log</b><div class="spacer"></div>
+		<button class="btn small" id="logrefresh">refresh</button>
+		<button class="btn small" id="logclose">close</button></header>
+	<pre id="logtext"></pre>
+</div>
+
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+function h(tag, attrs, ...kids) {
+	const el = document.createElement(tag);
+	for (const [k, v] of Object.entries(attrs || {})) {
+		if (v == null || v === false) continue;
+		if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+		else if (k === 'class') el.className = v;
+		else el.setAttribute(k, v === true ? '' : v);
+	}
+	for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+	return el;
+}
+const api = (url) => fetch(url).then(r => r.json());
+const post = (url, data) => fetch(url, {
+	method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data || {}),
+}).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok && !j.error) j.error = `HTTP ${r.status}`; return j; });
+
+function dur(s) {
+	if (s == null) return '';
+	s = Math.max(0, Math.round(s));
+	const d = Math.floor(s / 86400), hh = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+	return d ? `${d}d ${hh}h` : hh ? `${hh}h ${m}m` : m ? `${m}m ${s % 60}s` : `${s}s`;
+}
+function clock(s) { s = Math.round(s || 0); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+function say(el, text, kind) { el.textContent = text || ''; el.className = 'msg' + (text ? ` show ${kind || 'err'}` : ''); }
+
+let selMode = null, status = null;
+
+// ---- control strip --------------------------------------------------------------------
+document.querySelectorAll('#modes button').forEach(b => b.addEventListener('click', () => {
+	selMode = b.dataset.mode; paintModes();
+}));
+function paintModes() {
+	document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('sel', b.dataset.mode === selMode));
+	const running = status && status.mode;
+	$('#start').textContent = !running ? 'Start' : running === selMode ? 'Restart' : 'Switch';
+}
+$('#start').addEventListener('click', async () => {
+	$('#start').disabled = true;
+	say($('#ctlmsg'), status && status.mode && status.mode !== selMode ? 'Switching mode: the app restarts…' : 'Starting…', 'info');
+	const r = status && status.mode === selMode ? await restartAll() : await post('/api/start', {mode: selMode});
+	say($('#ctlmsg'), r.error);
+	$('#start').disabled = false;
+	tick();
+});
+async function restartAll() {
+	for (const k of Object.keys(status.services))
+		if (!['stopped', 'failed'].includes(status.services[k].health)) await post('/api/restart', {service: k});
+	return {ok: true};
+}
+$('#stop').addEventListener('click', async () => {
+	const r = await post('/api/stop'); say($('#ctlmsg'), r.error); tick();
+});
+
+// ---- status ---------------------------------------------------------------------------
+function paintServices(svc) {
+	const box = $('#services'); box.replaceChildren();
+	for (const [key, s] of Object.entries(svc)) {
+		const meta = [s.health, s.note, s.uptime != null && s.health === 'ok' ? `up ${dur(s.uptime)}` : null,
+		              s.restarts ? `${s.restarts} restart${s.restarts > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ');
+		box.append(h('div', {class: 'svc'},
+			h('span', {class: `dot ${s.health}`}),
+			h('span', {class: 'name'}, s.label),
+			h('span', {class: 'btns'},
+				s.health !== 'stopped' ? h('button', {class: 'btn small', onclick: async () => {
+					const r = await post('/api/restart', {service: key}); say($('#ctlmsg'), r.error); tick();
+				}}, 'restart') : null,
+				h('button', {class: 'btn small', 'data-logs': key}, 'log')),
+			h('span', {class: 'meta'}, meta),
+			s.error ? h('span', {class: 'err'}, s.error) : null));
+	}
+}
+
+function paintJoin(join) {
+	const box = $('#join');
+	if (!join.length) { box.replaceChildren(h('p', {class: 'empty'}, 'Start karaoke to get the join links.')); return; }
+	const key = JSON.stringify(join);
+	if (box.dataset.key === key) return;            // don't reload QR images every tick
+	box.dataset.key = key;
+	box.replaceChildren(
+		h('div', {class: 'join'}, join.filter(j => j.qr).map(j => h('div', {class: 'tile'},
+			h('img', {src: '/api/qr?data=' + encodeURIComponent(j.url), alt: ''}),
+			h('div', {class: 'lbl'}, j.label), h('div', {class: 'url'}, h('a', {href: j.url, target: '_blank', rel: 'noreferrer'}, j.url))))),
+		h('div', {class: 'links'}, join.filter(j => !j.qr).map(j =>
+			h('div', {}, `${j.label}: `, h('a', {href: j.url, target: '_blank', rel: 'noreferrer'}, j.url)))));
+}
+
+function paintActivity(act) {
+	const box = $('#activity'), a = act.app, g = act.gpu;
+	if (!a && !g) { box.replaceChildren(h('p', {class: 'empty'}, 'Not running.')); return; }
+	const kids = [];
+	if (a && a.now_playing) {
+		const pct = a.length ? Math.min(100, 100 * (a.position || 0) / a.length) : 0;
+		kids.push(h('div', {class: 'np-title'}, a.now_playing),
+			h('div', {class: 'np-user'}, `sung by ${a.now_playing_user || '?'}${a.is_paused ? ' · paused' : ''}`),
+			h('div', {class: 'bar'}, h('i', {style: `width:${pct}%`})),
+			h('div', {class: 'times'}, h('span', {}, clock(a.position)), h('span', {}, clock(a.length))));
+	} else if (a) {
+		kids.push(h('div', {class: 'np-title empty'}, 'Nothing playing'));
+	}
+	if (a && a.queue.length)
+		kids.push(h('ol', {class: 'queue'}, a.queue.slice(0, 8).map(q => h('li', {}, h('span', {}, q.title), h('em', {}, q.user)))),
+			a.queue.length > 8 ? h('div', {class: 'hint'}, `+${a.queue.length - 8} more`) : null);
+	const kv = [];
+	if (a) kv.push(['Library', `${a.songs} songs`], ['Queue', `${a.queue.length} waiting`]);
+	if (a && a.downloading) kv.push(['Downloading', `${a.downloading}`]);
+	if (a && a.vocal_split_pending) kv.push(['Vocal splits queued', `${a.vocal_split_pending}`]);
+	if (g) {
+		const w = g.activity;
+		kv.push(['GPU', [w.split && `splitting ${w.split}`, w.karaoke && `building color-wipe for ${w.karaoke}`,
+			w.karaoke_waiting && `${w.karaoke_waiting} more queued`, w.asr_running && 'voice search'].filter(Boolean).join(' · ') || 'idle']);
+		kv.push(['Model', `Whisper ${g.model} on ${g.device}${g.gpu_mem_mb != null ? ` · ${(g.gpu_mem_mb / 1000).toFixed(1)} GB` : ''}`]);
+	}
+	kids.push(h('dl', {class: 'kv'}, kv.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])));
+	box.replaceChildren(...kids);
+}
+
+const jobBtns = {};
+function paintJobs(jobs) {
+	for (const [name, j] of Object.entries(jobs)) {
+		const el = document.getElementById('job-' + name);
+		if (!el) continue;
+		el.className = 'jobstate ' + j.state;
+		el.textContent = {idle: '', running: 'running…', done: 'done', failed: 'failed'}[j.state];
+		const b = jobBtns[name]; if (b) b.disabled = j.state === 'running';
+		if (j.state !== el.dataset.prev && el.dataset.prev === 'running') { loadLibrary(); loadUpdates(); }
+		el.dataset.prev = j.state;
+	}
+}
+
+async function tick() {
+	try { status = await api('/api/status'); } catch (e) { return; }
+	$('#host').textContent = status.host;
+	const pill = $('#modepill');
+	pill.textContent = status.mode ? {monitor: 'on this monitor', tv: 'streaming to TV', public: 'public'}[status.mode] : 'stopped';
+	pill.classList.toggle('on', !!status.mode);
+	if (selMode == null) selMode = status.mode || status.last_mode;
+	paintModes();
+	$('#stop').disabled = !status.mode && Object.values(status.services).every(s => s.health === 'stopped');
+	if (status.legacy_session) say($('#ctlmsg'), "start-karaoke.sh is running (tmux session 'OHK'). Stop it before starting from here: tmux kill-session -t OHK", 'info');
+	paintServices(status.services); paintJoin(status.join); paintActivity(status.activity); paintJobs(status.jobs);
+}
+
+// ---- library --------------------------------------------------------------------------
+function jobButton(name, label) {
+	const b = h('button', {class: 'btn small', onclick: async () => {
+		b.disabled = true;
+		const r = await post('/api/jobs/' + name);
+		if (r.error) alertIn($('#library'), r.error); tick();
+	}}, label);
+	jobBtns[name] = b;
+	return [b, h('span', {class: 'jobstate', id: 'job-' + name}), h('button', {class: 'btn small', 'data-logs': 'job:' + name}, 'log')];
+}
+function alertIn(box, text) { const m = h('div', {class: 'msg show err'}, text); box.append(m); setTimeout(() => m.remove(), 8000); }
+
+async function loadLibrary() {
+	const L = await api('/api/library'), box = $('#library');
+	if (L.error) { box.replaceChildren(h('p', {class: 'empty'}, L.error)); return; }
+	const stat = (n, label, warn) => h('div', {class: 'stat' + (warn && n ? ' warn' : '')}, h('b', {}, n), h('small', {}, label));
+	const kids = [h('div', {class: 'stats'},
+		stat(L.songs, 'songs'), stat(L.missing_stems.length, 'no vocal stems', 1),
+		stat(L.missing_colorwipe.length, 'no color-wipe', 1), stat(L.cleanable.length, `leftovers · ${L.size_mb} MB`, 1))];
+	kids.push(h('div', {class: 'row'}, jobButton('presplit', 'Pre-split vocals')),
+		h('div', {class: 'row', style: 'margin-top:8px'}, jobButton('gen-missing', 'Generate missing color-wipes')));
+	if (L.cleanable.length) {
+		const boxes = L.cleanable.map(f => h('input', {type: 'checkbox', checked: true, value: f}));
+		kids.push(h('details', {open: true}, h('summary', {}, `Clean up ${L.cleanable.length} leftovers (moved to a trash folder, not deleted)`),
+			h('div', {class: 'filelist'}, L.cleanable.map((f, i) => h('label', {}, boxes[i],
+				h('span', {}, f, L.orphans.includes(f) ? ' — its song is gone' : ' — unfinished download')))),
+			L.skipped_recent.length ? h('div', {class: 'hint'}, `${L.skipped_recent.length} recent partial files skipped (a download may still own them).`) : null,
+			h('button', {class: 'btn danger small', onclick: async () => {
+				const files = boxes.filter(b => b.checked).map(b => b.value);
+				if (!files.length) return;
+				const r = await post('/api/library/cleanup', {files});
+				alertIn(box, r.error || `Moved ${r.moved.length} files to ${r.trash}`);
+				setTimeout(loadLibrary, 300);
+			}}, 'Move selected to trash')));
+	}
+	const notes = [];
+	if (L.duplicates.length) notes.push(h('details', {}, h('summary', {}, `${L.duplicates.length} songs downloaded twice (.mp4 + .webm)`),
+		h('div', {class: 'filelist'}, L.duplicates.map(d => h('div', {}, d.join('  |  '))))));
+	if (L.hidden.length) notes.push(h('details', {}, h('summary', {}, `${L.hidden.length} song hidden from the app (name starts with ".")`),
+		h('div', {class: 'filelist'}, L.hidden.map(f => h('div', {}, f)))));
+	if (L.missing_stems.length) notes.push(h('details', {}, h('summary', {}, 'Songs without vocal stems'),
+		h('div', {class: 'filelist'}, L.missing_stems.map(f => h('div', {}, f)))));
+	kids.push(...notes);
+	box.replaceChildren(...kids);
+	if (status) paintJobs(status.jobs);
+}
+$('#librefresh').addEventListener('click', loadLibrary);
+
+// ---- updates --------------------------------------------------------------------------
+function paintUpdates(U) {
+	const y = U.ytdlp, g = U.git, box = $('#updates');
+	const commits = (list) => h('ul', {class: 'commits'}, list.slice(0, 8).map(c => h('li', {}, h('code', {}, c.sha), ' ', c.subject)));
+	const kids = [h('dl', {class: 'kv'},
+		h('dt', {}, 'yt-dlp'), h('dd', {}, `${y.version || 'missing'}${y.solver ? ` · solver ${y.solver}` : ' · NO challenge solver'}`),
+		h('dt', {}, 'deno'), h('dd', {}, y.deno ? 'installed' : 'MISSING — YouTube downloads will fail'),
+		h('dt', {}, 'Auto-update'), h('dd', {}, y.last_auto_update ? `last ran ${y.last_auto_update} (daily, when the app starts)` : 'never ran'))];
+	kids.push(h('div', {class: 'row', style: 'margin-top:10px'}, jobButton('ytdlp-update', 'Update yt-dlp now')));
+	kids.push(h('dl', {class: 'kv'},
+		h('dt', {}, 'Code'), h('dd', {}, `${g.branch} · ${g.head}${g.dirty ? ' · uncommitted changes' : ''}`),
+		h('dt', {}, 'Checked'), h('dd', {}, g.last_fetch ? new Date(g.last_fetch * 1000).toLocaleString() : 'never')));
+	if (g.incoming.length) kids.push(h('p', {}, `${g.incoming.length} new on ${g.fork_branch}:`), commits(g.incoming),
+		h('button', {class: 'btn small primary', onclick: async () => {
+			const r = await post('/api/updates/pull'); alertIn(box, r.error || 'Updated. Restart karaoke to run the new code.'); loadUpdates();
+		}}, 'Update code (fast-forward)'));
+	else if (g.fork_branch) kids.push(h('p', {class: 'hint'}, `Up to date with ${g.fork_branch}.`));
+	else kids.push(h('p', {class: 'hint'}, `Branch ${g.branch} is not on your fork, so there is nothing to pull.`));
+	if (g.upstream_new.length) kids.push(h('p', {}, `${g.upstream_new.length} new upstream commits (merge these by hand):`), commits(g.upstream_new));
+	box.replaceChildren(...kids);
+	if (status) paintJobs(status.jobs);
+}
+async function loadUpdates() { paintUpdates(await api('/api/updates')); }
+$('#fetch').addEventListener('click', async () => {
+	$('#fetch').disabled = true; $('#fetch').textContent = 'checking…';
+	paintUpdates(await post('/api/updates/fetch'));
+	$('#fetch').disabled = false; $('#fetch').textContent = 'check now';
+});
+
+// ---- settings -------------------------------------------------------------------------
+const FIELDS = [
+	['whisper_model', 'Whisper model (voice search + lyrics alignment)', 'select'],
+	['song_dir', 'Song folder', 'text'],
+	['tv_quality', 'TV quality, QP 20-34 (blank = 28; higher = lighter)', 'number'],
+	['tv_scale', 'TV height in px (blank = 720)', 'number'],
+	['public_url', 'Public phone URL', 'text'],
+	['public_tv_url', 'Public TV URL', 'text'],
+	['cf_config', 'Cloudflare tunnel config', 'text'],
+	['asr_port', 'Voice/GPU server port', 'number'],
+];
+async function loadSettings() {
+	const S = await api('/api/settings'), form = $('#settings');
+	form.replaceChildren(...FIELDS.map(([k, label, type]) => h('label', {}, label,
+		type === 'select'
+			? h('select', {name: k}, S.whisper_models.map(m => h('option', {value: m, selected: m === S[k]}, m)))
+			: h('input', {name: k, type, value: S[k] ?? ''}))),
+		h('label', {}, `Admin password (${S.admin_password_set ? 'set; leave blank to keep' : 'not set: required for Public'})`,
+			h('input', {name: 'admin_password', type: 'password', placeholder: S.admin_password_set ? '••••••' : ''})),
+		S.admin_password_set ? h('label', {class: 'check'}, h('input', {type: 'checkbox', name: 'admin_password_clear'}), 'Remove the admin password') : null);
+}
+$('#savesettings').addEventListener('click', async () => {
+	const data = {};
+	for (const el of $('#settings').elements) data[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+	if (!data.admin_password) delete data.admin_password;
+	const r = await post('/api/settings', data);
+	say($('#setmsg'), r.error || (status && status.mode ? 'Saved. Restart karaoke to apply.' : 'Saved.'), r.error ? 'err' : 'info');
+	if (!r.error) loadSettings();
+});
+
+// ---- logs -----------------------------------------------------------------------------
+let logUnit = null;
+async function showLog(unit) {
+	logUnit = unit;
+	const r = await api('/api/logs?unit=' + encodeURIComponent(unit));
+	$('#logtitle').textContent = r.unit;
+	const pre = $('#logtext'); pre.textContent = r.text || '(empty)';
+	$('#logs').classList.add('open'); pre.scrollTop = pre.scrollHeight;
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-logs]'); if (b) showLog(b.dataset.logs); });
+$('#logclose').addEventListener('click', () => $('#logs').classList.remove('open'));
+$('#logrefresh').addEventListener('click', () => logUnit && showLog(logUnit));
+
+tick(); setInterval(tick, 2000);
+loadLibrary(); loadUpdates(); loadSettings();
+</script>
+</body>
+</html>

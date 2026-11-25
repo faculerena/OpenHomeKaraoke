@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Open the OHK admin panel (the "Karaoke Panel" entry in your app launcher runs this).
+# Installs/refreshes the systemd user units, starts the panel service if it isn't running,
+# and opens it as an app window. Nothing here is enabled at login.
+#
+#   scripts/ohk-panel           start the panel + open the window
+#   scripts/ohk-panel --no-open start the panel only (e.g. to use it from your phone)
+set -eu
+cd "$(dirname "$(readlink -f "$0")")/.."
+PY="$PWD/.venv/bin/python"
+URL="http://127.0.0.1:12345"
+
+"$PY" -c 'from panel import services; services.install()'
+systemctl --user start ohk-panel.service
+
+for _ in $(seq 1 40); do
+	curl -fs -o /dev/null --max-time 1 "$URL/" && break
+	sleep 0.25
+done
+
+[ "${1:-}" = "--no-open" ] && { echo "panel: $URL"; exit 0; }
+
+for b in chromium google-chrome-stable; do
+	if command -v "$b" >/dev/null; then
+		# own profile dir: a separate window class (Hyprland rules can match 'ohk-panel'),
+		# and it never mixes with your normal browsing session
+		exec "$b" --app="$URL" --class=ohk-panel --user-data-dir="$HOME/.local/share/ohk/panel-browser" \
+			--no-first-run --no-default-browser-check >/dev/null 2>&1
+	fi
+done
+exec xdg-open "$URL"
