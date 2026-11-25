@@ -56,6 +56,7 @@ hr { background: var(--line) !important; height: 1px !important; }
 	padding: 22px 18px 110px !important; }       /* bottom gutter: the walking gnomes live there */
 #container .box, #container .has-background-black-bis { background: transparent !important; border-radius: 0 !important;
 	border-top: 1px solid var(--line) !important; padding: 18px 0 0 !important; margin-top: 8px; }
+#container hr:has(+ .box) { display: none; }
 #alpha-bar.has-background-dark { background: var(--cab) !important; border-radius: 12px !important; }
 
 /* ---- controls -------------------------------------------------------------------------- */
@@ -73,8 +74,8 @@ hr { background: var(--line) !important; height: 1px !important; }
 	border-radius: 12px !important; box-shadow: none !important; min-height: 48px; font: 400 var(--t3) var(--sans) !important; }
 .input:focus, .textarea:focus, select:focus, input[type=text]:focus { border-color: var(--amber) !important; }
 .input::placeholder, input::placeholder { color: var(--faint) !important; }
-.field.has-addons .control:first-child .input, .field.has-addons .control:first-child input { border-radius: 12px 0 0 12px !important; }
-.field.has-addons .control:last-child .button, .field.has-addons .button:last-child { border-radius: 0 12px 12px 0 !important; min-height: 48px; margin-left: 0 !important; }
+.field.has-addons .input { border-radius: 12px 0 0 12px !important; }
+.field.has-addons .button { border-radius: 0 12px 12px 0 !important; min-height: 48px; margin-left: 0 !important; }
 .select:not(.is-multiple):not(.is-loading)::after { border-color: var(--amber) !important; }
 .checkbox, .label { color: var(--dim) !important; font-size: var(--t2); }
 input[type=checkbox] { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; vertical-align: -4px; margin-right: 4px;
@@ -119,8 +120,8 @@ body rbutton + rbutton { background: transparent !important; color: var(--print)
 .notification .delete { background: var(--line) !important; }
 
 /* ---- Home: now playing + the dial ------------------------------------------------------- */
-#container:has(#now-playing) > header.title h1 { font-size: var(--t2) !important; letter-spacing: .16em !important; text-transform: uppercase;
-	color: var(--faint) !important; font-weight: 600 !important; margin-bottom: 10px !important; }
+#container:has(#now-playing) > header.title h1 { position: absolute !important; width: 1px; height: 1px; overflow: hidden;
+	clip: rect(0 0 0 0); white-space: nowrap; margin: 0 !important; }        /* still read by screen readers */
 #now-playing { font: 500 var(--t6)/1.08 var(--cond) !important; color: var(--print) !important; margin-bottom: 10px !important; }
 #now-playing p { margin-bottom: 4px !important; }
 #now-playing .singer { font: 600 var(--t3) var(--sans); }
@@ -148,7 +149,7 @@ body rbutton + rbutton { background: transparent !important; color: var(--print)
 
 /* player control */
 #label-player-control { font-size: var(--t5) !important; }
-#s3-inner { background: var(--ground) !important; }
+#s3-inner { background: var(--cab-2) !important; box-shadow: inset 0 0 0 1px var(--line); }
 .redButton { background: var(--amber) !important; }
 .legendText { color: var(--dim) !important; font: 600 var(--t2) var(--cond) !important; letter-spacing: .06em; text-transform: uppercase; }
 .control-box .is-size-3 a { color: var(--print); }

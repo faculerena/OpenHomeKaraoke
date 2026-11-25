@@ -60,7 +60,7 @@ class Karaoke:
 	ref_W, ref_H = 1920, 1080      # reference screen size, control drawing scale
 
 	queue = []
-	queue_json = ''
+	queue_json = '[]'      # valid JSON from the start: the Queue page ignores an empty reply, so it never drew its empty state
 	available_songs = []
 	rename_history = {}
 	songname_trans = {} # transliteration is used for sorting and initial letter search
