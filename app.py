@@ -454,6 +454,15 @@ def lyrics():
 	return json.dumps(rc)
 
 
+class _QuietPanelPolls(logging.Filter):
+	# the admin panel polls /ohk_status every 2s; keep that out of the journal it displays
+	def filter(self, record):
+		return '/ohk_status' not in record.getMessage()
+
+
+logging.getLogger('werkzeug').addFilter(_QuietPanelPolls())
+
+
 @app.route("/ohk_status")
 def ohk_status():
 	# Live activity for the admin panel (panel/). Only what guests can already see in the web

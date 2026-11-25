@@ -17,7 +17,7 @@
 # Whisper model (-m / $ASR_MODEL): tiny|base|small|medium|large-v3 (bigger = more accurate, slower).
 # Keep responses under app.py's 8s ASR timeout; "small" or "medium" are good on this GPU.
 
-import os, io, sys, uuid, tempfile, tarfile, argparse, threading, shutil
+import os, io, sys, uuid, tempfile, tarfile, argparse, threading, shutil, logging
 import torch
 from types import SimpleNamespace
 from flask import Flask, request, jsonify, Response
@@ -85,6 +85,15 @@ def load_models(args):
 	G.split_args = SimpleNamespace(model=vmodel, device=G.device, batchsize=4, cropsize=256,
 	                               sr=44100, hop_length=1024, n_fft=2048, tta=False)
 	print(f'Ready. GPU mem: {round(torch.cuda.memory_allocated()/1e6,1)} MB', flush=True)
+
+
+class _QuietPanelPolls(logging.Filter):
+	# the admin panel polls /status every 2s; keep that out of the journal it displays
+	def filter(self, record):
+		return 'GET /status ' not in record.getMessage()
+
+
+logging.getLogger('werkzeug').addFilter(_QuietPanelPolls())
 
 
 @app.route('/status')

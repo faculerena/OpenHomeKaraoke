@@ -77,6 +77,13 @@ across every index in the file:
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
+**Or use the admin panel:** `scripts/ohk-panel` (it also installs a "Karaoke Panel"
+launcher entry) opens a window to start/stop everything by mode (this monitor, TV stream,
+public), see each piece's health and logs, get the join QR codes, and run library
+maintenance and updates. It runs the pieces as systemd user services (nothing enabled at
+login) and is reachable only from this machine and your own tailnet devices, on :12345.
+Details in `TODO.md`.
+
 Then open the URL shown on the splash screen (or scan its QR code) from a phone on the
 same network.
 

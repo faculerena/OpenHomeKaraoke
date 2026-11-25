@@ -28,6 +28,8 @@ def gen_missing():
 		sys.exit('The voice/GPU server is not running. Start karaoke from the panel first.')
 	songs = library.scan()['missing_colorwipe']
 	print(f'{len(songs)} songs without a color-wipe', flush = True)
+	if not songs:
+		return
 	root = C.song_dir(cfg)
 	for m in songs:
 		_asr(cfg, '/make_karaoke', {'path': os.path.join(root, m)})
