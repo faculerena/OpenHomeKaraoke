@@ -22,7 +22,7 @@ function update(data){
 	catch{console.log(`JSON parse error: ${data}`);return;}
 	if (obj.now_playing) {
 	var nowPlayingHtml = `<p style="margin-bottom: 5px">${obj.now_playing}</p>
-		<p class="has-text-success" style="margin-bottom: 5px"><i class="icon icon-adult" title="Current singer"></i>${obj.now_playing_user}</p>`;
+		<p class="singer" style="margin-bottom: 5px; color:${singerColor(obj.now_playing_user)}"><i class="icon icon-adult" title="Current singer"></i>${obj.now_playing_user}</p>`;
 
 	if ($("#transpose")){
 		if(!transpose_seeking){
@@ -79,10 +79,11 @@ function update(data){
 		$("#now-playing").html("{{getString1(69)}}");
 		$(".control-box").hide();
 	}
+	paintPhoneDial();
 
 	if (obj.up_next) {
 	$("#up-next").html(`<p><span style="max-width:70%; white-space:nowrap; overflow:hidden; position:absolute; padding-top:4px;">${obj.up_next}</span>
-		<span class="has-text-success" style="float:right; max-width:30%; white-space:nowrap; overflow:hidden;"><i class="icon icon-adult" title="Next singer"></i>${obj.next_user}</span></p>`);
+		<span style="float:right; max-width:30%; white-space:nowrap; overflow:hidden; color:${singerColor(obj.next_user)}"><i class="icon icon-adult" title="Next singer"></i>${obj.next_user}</span></p>`);
 	} else {
 		$("#up-next").html("{{getString1(70)}}");
 	}
@@ -99,6 +100,40 @@ function update(data){
 		$("#vol").text(obj.volume);
 
 	lyricsOnStatus();
+}
+/* ---- the dial: this song as the needle, the queue as the stations after it ---------- */
+var dialQueue = [], dialQueueAt = 0, dialHeld = 0, dialAuto = false;
+const DIAL_PXM = 70;                       // px per minute of the current song
+const DIAL_STATION = 190;                  // px per queued song (their lengths aren't known here)
+function dialEsc(s) { return $('<div>').text(s == null ? '' : s).html(); }
+function paintPhoneDial() {
+	if (Date.now() - dialQueueAt > 8000) {   // refresh the queue now and then, not every tick
+		dialQueueAt = Date.now();
+		$.get('/get_queue', (d) => { try { dialQueue = typeof d === 'string' ? JSON.parse(d || '[]') : d; } catch { dialQueue = []; } });
+	}
+	const glass = document.getElementById('ohk-glass'), track = document.getElementById('ohk-track');
+	if (!glass || !track) return;
+	const len = Math.max(60, obj.seektrack_max || 0), pos = Math.min(obj.seektrack_value || 0, len);
+	const curW = len / 60 * DIAL_PXM;
+	let html = `<div class="ohk-scale" style="width:${curW}px; --min:${DIAL_PXM}px"></div>`
+		+ `<div class="ohk-lit" style="width:${pos / 60 * DIAL_PXM}px"></div>`;
+	if (obj.now_playing)
+		html += `<div class="ohk-seg" style="left:0; width:${curW - 4}px; color:${singerColor(obj.now_playing_user)}"><span>${dialEsc(obj.now_playing)}</span><b>${dialEsc(obj.now_playing_user)}</b></div>`;
+	(dialQueue || []).forEach((q, i) => {
+		html += `<div class="ohk-seg" style="left:${curW + i * DIAL_STATION}px; width:${DIAL_STATION - 6}px; color:${singerColor(q.user)}"><span>${dialEsc(q.title)}</span><b>${dialEsc(q.user)}</b></div>`;
+	});
+	const x = pos / 60 * DIAL_PXM;
+	html += `<div class="ohk-needle" style="left:${x}px"></div>`;
+	track.style.width = (curW + (dialQueue || []).length * DIAL_STATION + 40) + 'px';
+	track.innerHTML = html;
+	// follow the needle only once it passes 60% of the glass, so the current song's label stays readable
+	if (Date.now() > dialHeld) { dialAuto = true; glass.scrollLeft = Math.max(0, x - glass.clientWidth * 0.6); setTimeout(() => dialAuto = false, 50); }
+	if (!glass.dataset.wired) {
+		glass.dataset.wired = 1;
+		const hold = () => { dialHeld = Date.now() + 8000; };
+		glass.addEventListener('touchstart', hold, {passive: true});
+		glass.addEventListener('scroll', () => { if (!dialAuto) hold(); });
+	}
 }
 function getNowPlaying() { $.get('/nowplaying').done(update); }
 
@@ -430,6 +465,9 @@ body {
 
 <div class="content">
 <p class="is-size-4 has-text-warning" id="now-playing"></p>
+<div class="ohk-dial control-box" id="ohk-dial">
+	<div class="ohk-glass" id="ohk-glass"><div class="ohk-track" id="ohk-track"></div></div>
+</div>
 <p class="control-box" style="margin-top:6px">
 	<a id="lyrics-open" class="button is-small is-dark"><i class="icon icon-th-list"></i>&nbsp;{{getString1(238)}}</a>
 </p>
@@ -486,17 +524,17 @@ body {
 	<div id="subdelay-box">
 		<div class="is-flex" style="justify-content: space-between">
 			<h4><span title="{{getString1(198)}}" id="subtitle-sel" style="cursor:pointer">{{getString1(78)}}</span><a id="subdelay-info"> <i class="icon icon-info-circled-1" title="Info"></i></a>:</h4>
-			<h4 title="{{getString1(85)}}" id="subdelay-dec" class="tabs hand" style="margin:0; color:red; font-weight: bold; font-size:x-large;" >&#x2296;</h4>
+			<h4 title="{{getString1(85)}}" id="subdelay-dec" class="tabs hand step-btn" style="margin:0;"><i class="icon icon-minus-circled"></i></h4>
 			<h4 title="{{getString1(86)}}" id="subdelay-val" class="tabs hand" style="padding-top:2px; margin:0; contenteditable="true" onfocus="subdelay_typing=true">0</h4>
-			<h4 title="{{getString1(87)}}" id="subdelay-inc" class="tabs hand" style="margin:0; color:green; font-weight:bold;font-size:x-large;" >&#x2295;</h4>
+			<h4 title="{{getString1(87)}}" id="subdelay-inc" class="tabs hand step-btn" style="margin:0;"><i class="icon icon-plus-circled"></i></h4>
 		</div>
 	</div>
 
 	<div class="is-flex" style="justify-content: space-between">
 		<h4>{{getString1(77)}}<a id="audiodelay-info"> <i class="icon icon-info-circled-1" title="Info"></i></a>:</h4>
-		<h4 title="{{getString1(88)}}" id="delay-dec" class="tabs hand" style="margin:0; color:red; font-weight: bold; font-size:x-large;" >&#x2296;</h4>
+		<h4 title="{{getString1(88)}}" id="delay-dec" class="tabs hand step-btn" style="margin:0;"><i class="icon icon-minus-circled"></i></h4>
 		<h4 title="{{getString1(89)}}" id="delay-val" class="tabs hand" style="padding-top:2px; margin:0;" contenteditable="true" onfocus="audiodelay_typing=true">0</h4>
-		<h4 title="{{getString1(90)}}" id="delay-inc" class="tabs hand" style="margin:0; color:green; font-weight:bold;font-size:x-large;" >&#x2295;</h4>
+		<h4 title="{{getString1(90)}}" id="delay-inc" class="tabs hand step-btn" style="margin:0;"><i class="icon icon-plus-circled"></i></h4>
 	</div>
 
 	<div class="is-flex" style="justify-content: space-between">

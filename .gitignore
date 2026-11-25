@@ -6,3 +6,7 @@ songs/
 qrcode.png
 .DS_Store
 .yt-dlp.last-update
+# impeccable design tooling: keep briefs and DESIGN.md sidecars, not scratch captures
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/

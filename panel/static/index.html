@@ -3,307 +3,397 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>Karaoke Panel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='5' fill='%2331211a'/%3E%3Cpath d='M7 20a9 9 0 0 1 18 0' fill='none' stroke='%23f2b544' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M16 21 19.5 12.5' stroke='%23d9472f' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <style>
+@font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url(/static/fonts/barlow-400.woff2) format('woff2'); }
+@font-face { font-family: Barlow; font-weight: 500; font-display: swap; src: url(/static/fonts/barlow-500.woff2) format('woff2'); }
+@font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url(/static/fonts/barlow-600.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 400; font-display: swap; src: url(/static/fonts/barlowcondensed-400.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 500; font-display: swap; src: url(/static/fonts/barlowcondensed-500.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(/static/fonts/barlowcondensed-600.woff2) format('woff2'); }
+
+/* Radio de living: the house's console radio, tuned to tonight. */
 :root {
-	--bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --line: #2a2f3a;
-	--text: #e8eaee; --dim: #9aa3b2; --faint: #8a93a3;
-	--accent: #ff4f8b; --accent-strong: #c92a63; --accent-2: #ffb547;
-	--ok: #3ecf8e; --warn: #f5b942; --bad: #ff5d5d; --idle: #5b6472;
-	--radius: 12px;
+	--ground: #1d1410;      /* walnut, as a flat tint */
+	--cab: #261a13;         /* the cabinet, one step up */
+	--cab-2: #31211a;       /* controls set into it */
+	--line: #4a3326;
+	--print: #f1e3c4;       /* dial print */
+	--dim: #c4ad8e;
+	--faint: #a08a6d;
+	--amber: #f2b544;       /* the backlit glass: the only light on the page */
+	--amber-ink: #2a1a0c;
+	--needle: #d9472f;
+	--eye: #6fc39f;         /* magic-eye tube: healthy */
+	--warn: #f2b544;
+	--bad: #ef6a52;
+	--sans: Barlow, 'Noto Sans', 'Noto Sans CJK JP', system-ui, sans-serif;
+	--cond: 'Barlow Condensed', Barlow, 'Noto Sans CJK JP', system-ui, sans-serif;
+	/* one type scale, in steps */
+	--t1: 13px; --t2: 15px; --t3: 17px; --t4: 20px; --t5: 26px; --t6: 34px; --t7: 44px;
+	--gut: clamp(16px, 4vw, 48px);
+	--ease: cubic-bezier(.16, 1, .3, 1);
 	color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text);
-	font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-button, input, select { font: inherit; color: inherit; }
-a { color: var(--accent-2); }
+html, body { margin: 0; background: var(--ground); color: var(--print); font: 400 var(--t3)/1.5 var(--sans);
+	-webkit-font-smoothing: antialiased; }
+::selection { background: var(--amber); color: var(--amber-ink); }
+* { scrollbar-color: var(--line) transparent; scrollbar-width: thin; caret-color: var(--amber); }
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; border-radius: 6px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--amber); text-underline-offset: 3px; }
+b, strong { font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
 
-header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px;
-	padding: 14px 20px; background: rgba(15,17,21,.92); backdrop-filter: blur(8px);
-	border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.brand { font-weight: 700; letter-spacing: .2px; font-size: 17px; }
-.brand span { color: var(--accent); }
-.host { color: var(--faint); font-size: 13px; }
-.spacer { flex: 1; }
-.mode-pill { padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
-	background: var(--panel-2); border: 1px solid var(--line); color: var(--dim); }
-.mode-pill.on { color: #0f1115; background: var(--ok); border-color: var(--ok); }
-
-main { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 16px;
-	grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-	padding: 16px 18px; min-width: 0; }
-.card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .9px;
-	color: var(--dim); font-weight: 600; display: flex; align-items: center; gap: 8px; }
-.card h2 .act { margin-left: auto; }
-.wide { grid-column: 1 / -1; }
-
-/* control strip */
-.control { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
-.modes { display: inline-flex; background: var(--panel-2); border: 1px solid var(--line);
-	border-radius: 10px; padding: 3px; gap: 3px; flex-wrap: wrap; }
-.modes button { border: 0; background: transparent; padding: 9px 14px; border-radius: 8px;
-	cursor: pointer; color: var(--dim); text-align: left; }
-.modes button b { display: block; color: var(--text); font-weight: 600; }
-.modes button small { font-size: 12px; }
-.modes button.sel { background: var(--bg); box-shadow: inset 0 0 0 1px var(--accent); }
-.modes button.sel b { color: var(--accent); }
-.btn { border: 1px solid var(--line); background: var(--panel-2); padding: 8px 14px;
-	border-radius: 9px; cursor: pointer; white-space: nowrap; }
-.btn:hover { border-color: var(--faint); }
-.btn:disabled { opacity: .45; cursor: default; }
-.btn.primary { background: var(--accent-strong); border-color: var(--accent-strong); color: #fff; font-weight: 600; }
-.btn.danger { color: var(--bad); }
-.btn.small { padding: 4px 10px; font-size: 13px; border-radius: 7px; }
-.big { padding: 12px 22px; font-size: 16px; }
-.msg { margin-top: 12px; padding: 10px 12px; border-radius: 9px; font-size: 14px; display: none; }
+/* ---- top bar ---------------------------------------------------------------------- */
+.top { display: flex; align-items: center; gap: 12px 28px; flex-wrap: wrap; padding: 16px var(--gut);
+	border-bottom: 1px solid var(--line); background: var(--ground); position: sticky; top: 0; z-index: 10; }
+.brand { display: flex; align-items: center; gap: 10px; font: 600 var(--t4)/1 var(--cond); letter-spacing: .06em;
+	text-transform: uppercase; white-space: nowrap; }
+.brand svg { width: 30px; height: 30px; flex: none; }
+.brand small { font: 500 var(--t1) var(--cond); letter-spacing: .1em; color: var(--faint); margin-left: 4px; }
+.tabs { display: flex; gap: 22px; }
+.tabs a { font: 500 var(--t3)/1 var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--faint);
+	text-decoration: none; padding: 8px 0 6px; border-bottom: 2px solid transparent; }
+.tabs a:hover { color: var(--dim); }
+.tabs a.on { color: var(--print); border-bottom-color: var(--amber); }
+.controls { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.band { display: inline-flex; background: var(--cab); border-radius: 999px; padding: 4px; gap: 2px; }
+.band button { border: 0; background: transparent; color: var(--dim); cursor: pointer; border-radius: 999px;
+	padding: 8px 16px; font: 500 var(--t2)/1 var(--cond); letter-spacing: .08em; text-transform: uppercase;
+	transition: background .25s var(--ease), color .25s var(--ease); }
+.band button:hover { color: var(--print); }
+.band button.sel { background: var(--cab-2); color: var(--print); box-shadow: inset 0 0 0 1px var(--line); }
+.band button.sel.live { background: var(--amber); color: var(--amber-ink); box-shadow: none; }
+.btn { border: 1px solid var(--line); background: transparent; color: var(--print); cursor: pointer; border-radius: 999px;
+	padding: 9px 18px; font: 600 var(--t2)/1 var(--cond); letter-spacing: .1em; text-transform: uppercase;
+	white-space: nowrap; transition: background .2s, border-color .2s, color .2s; }
+.btn:hover { border-color: var(--dim); }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+.btn.primary:hover { background: #f6c566; }
+.btn.danger { color: var(--bad); border-color: rgba(239,106,82,.5); }
+.btn.small { padding: 6px 12px; font-size: var(--t1); }
+.link { border: 0; background: none; padding: 4px 2px; cursor: pointer; color: var(--faint);
+	font: 500 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; }
+.link:hover { color: var(--print); }
+.link:disabled { opacity: .4; cursor: default; }
+.link.danger { color: var(--bad); }
+.msg { display: none; margin: 14px var(--gut) 0; padding: 10px 14px; border-radius: 10px; font-size: var(--t2); }
 .msg.show { display: block; }
-.msg.err { background: rgba(255,93,93,.1); border: 1px solid rgba(255,93,93,.35); color: #ffb3b3; }
-.msg.info { background: rgba(245,185,66,.08); border: 1px solid rgba(245,185,66,.3); color: #f7d898; }
-
-/* services */
-.svc { display: grid; grid-template-columns: 12px 1fr auto; gap: 4px 12px; align-items: center;
-	padding: 10px 0; border-top: 1px solid var(--line); }
-.svc:first-of-type { border-top: 0; padding-top: 2px; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--idle); }
-.dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(62,207,142,.15); }
-.dot.starting, .dot.stopping { background: var(--warn); animation: pulse 1.2s infinite; }
-.dot.degraded { background: var(--warn); }
-.dot.failed { background: var(--bad); }
-@keyframes pulse { 50% { opacity: .35; } }
-.svc .name { font-weight: 600; }
-.svc .meta { grid-column: 2 / 4; color: var(--dim); font-size: 13px; }
-.svc .err { grid-column: 2 / 4; color: #ffb3b3; font: 12px/1.4 ui-monospace, monospace;
-	background: rgba(255,93,93,.07); padding: 6px 8px; border-radius: 6px; overflow-wrap: anywhere; }
-.svc .btns { display: flex; gap: 6px; }
-
-/* join */
-.join { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.join .tile { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
-	padding: 10px; text-align: center; }
-.join img { width: 100%; max-width: 160px; background: #fff; border-radius: 6px; display: block; margin: 0 auto 8px; }
-.join .lbl { font-size: 13px; color: var(--dim); }
-.join .url { font: 12px ui-monospace, monospace; overflow-wrap: anywhere; }
-.links { margin-top: 10px; font-size: 13px; color: var(--dim); }
-.links div { overflow-wrap: anywhere; }
-
-/* activity */
-.np-title { font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
-.np-user { color: var(--dim); font-size: 13px; }
-.bar { height: 6px; background: var(--panel-2); border-radius: 3px; margin: 10px 0 4px; overflow: hidden; }
-.bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
-.times { display: flex; justify-content: space-between; color: var(--faint); font-size: 12px; }
-.queue { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: q; }
-.queue li { padding: 6px 0; border-top: 1px solid var(--line); display: flex; gap: 10px; font-size: 14px; }
-.queue li::before { counter-increment: q; content: counter(q); color: var(--faint); width: 1.4em; text-align: right; }
-.queue li span { flex: 1; overflow-wrap: anywhere; }
-.queue li em { color: var(--faint); font-style: normal; font-size: 13px; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin-top: 12px; font-size: 14px; }
-.kv dt { color: var(--dim); }
-.kv dd { margin: 0; overflow-wrap: anywhere; }
-.empty { color: var(--faint); }
-
-/* library + updates */
-.stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
-.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; min-width: 92px; }
-.stat b { display: block; font-size: 20px; }
-.stat small { color: var(--dim); font-size: 12px; }
-.stat.warn b { color: var(--warn); }
-.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.jobstate { font-size: 12px; color: var(--dim); }
-.jobstate.running { color: var(--warn); }
-.jobstate.failed { color: var(--bad); }
-.jobstate.done { color: var(--ok); }
-details { margin-top: 10px; }
-summary { cursor: pointer; color: var(--dim); font-size: 14px; }
-.filelist { max-height: 260px; overflow: auto; margin: 8px 0; font: 12px/1.5 ui-monospace, monospace;
-	background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
-.filelist label { display: flex; gap: 8px; align-items: flex-start; padding: 2px 0; overflow-wrap: anywhere; }
-.commits { font-size: 13px; margin: 6px 0 0; padding-left: 18px; color: var(--dim); }
-.commits code { color: var(--accent-2); }
-
-/* settings */
-form.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px 16px; }
-form.settings label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--dim); }
-form.settings input, form.settings select { background: var(--bg); border: 1px solid var(--line);
-	border-radius: 8px; padding: 8px 10px; color: var(--text); min-width: 0; }
-form.settings .check { flex-direction: row; align-items: center; gap: 8px; }
-.hint { color: var(--faint); font-size: 12px; }
-
-/* guest welcome */
-.welcome-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
-@media (max-width: 760px) { .welcome-grid { grid-template-columns: 1fr; } }
-.welcome-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--dim); margin-bottom: 10px; }
-.welcome-grid label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--text); font-size: 14px; }
-.welcome-grid input[type=text], .welcome-grid textarea { background: var(--bg); border: 1px solid var(--line);
-	border-radius: 8px; padding: 8px 10px; color: var(--text); font: inherit; }
-.welcome-grid textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
-.preview { background: #fff; color: #222; border-radius: 10px; padding: 16px 18px; align-self: start; }
-.preview h3 { margin: 0 0 10px; text-align: center; font-size: 19px; }
-.preview ul { margin: 0 0 12px; padding-left: 1.2em; line-height: 1.5; font-size: 14px; }
-.preview .pname { font-size: 13px; color: #555; }
-.preview .pinput { border: 1px solid #ccc; border-radius: 6px; height: 30px; margin-top: 4px; }
-.preview-tag { font-size: 12px; color: var(--faint); margin: 0 0 6px; text-transform: uppercase; letter-spacing: .8px; }
-
-/* tabs */
-.tabs { display: inline-flex; gap: 4px; margin-left: 12px; }
-.tabs a { padding: 6px 12px; border-radius: 8px; color: var(--dim); text-decoration: none; font-weight: 600; font-size: 14px; }
-.tabs a.on { background: var(--panel-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.msg.err { background: rgba(239,106,82,.12); color: #ffc4b8; }
+.msg.info { background: rgba(242,181,68,.10); color: #f6d896; }
+main { padding-bottom: 64px; }
 main[hidden] { display: none; }
 
-/* song list */
-.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-.toolbar input[type=search], .toolbar select { background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-	padding: 8px 10px; color: var(--text); }
-.toolbar input[type=search] { flex: 1; min-width: 200px; }
-.chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.chip { border: 1px solid var(--line); background: transparent; color: var(--dim); border-radius: 999px;
-	padding: 4px 11px; font-size: 13px; cursor: pointer; }
-.chip.on { background: var(--panel-2); color: var(--text); border-color: var(--faint); }
-.chip b { color: var(--faint); font-weight: 600; margin-left: 4px; }
-.count { color: var(--faint); font-size: 13px; margin-left: auto; }
-.song { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; padding: 11px 2px; border-top: 1px solid var(--line); align-items: center; }
-.song .t { font-weight: 600; overflow-wrap: anywhere; }
-.song .m { color: var(--faint); font-size: 12px; overflow-wrap: anywhere; }
-.song .badges { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
-.badge { font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
-.badge.good { color: var(--ok); border-color: rgba(62,207,142,.35); }
-.badge.warn { color: var(--warn); border-color: rgba(245,185,66,.35); }
-.badge.hot { color: #fff; background: var(--accent-strong); border-color: var(--accent-strong); }
-.song .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.song input.rename { background: var(--bg); border: 1px solid var(--accent); border-radius: 7px; padding: 5px 8px;
-	color: var(--text); font: inherit; font-weight: 600; width: 100%; }
-@media (max-width: 700px) { .song { grid-template-columns: 1fr; } .song .acts { justify-content: flex-start; } }
-.batch { border-top: 1px solid var(--line); padding: 10px 0; }
-.batch:first-child { border-top: 0; }
+/* ---- the dial --------------------------------------------------------------------- */
+.dial { margin: 28px var(--gut) 0; padding: 24px clamp(16px, 2.4vw, 32px) 26px; border-radius: 18px; background: var(--cab); }
+.dial-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 18px; }
+.now-title { font: 500 var(--t7)/1.02 var(--cond); letter-spacing: -.005em; margin: 0; overflow-wrap: anywhere; text-wrap: balance; }
+.now-sub { font: 500 var(--t4)/1.3 var(--sans); color: var(--dim); margin-top: 6px; }
+.now-sub b { font-weight: 600; }
+.now-clock { font: 500 var(--t5)/1 var(--cond); color: var(--amber); letter-spacing: .04em; white-space: nowrap; }
+.now-clock small { display: block; font: 500 var(--t1)/1.4 var(--cond); color: var(--faint); letter-spacing: .12em;
+	text-transform: uppercase; text-align: right; }
+.glass { position: relative; border-radius: 12px; overflow-x: auto; overflow-y: hidden; height: 150px;
+	background: #170f0b; transition: background 1.6s var(--ease); overscroll-behavior-x: contain; }
+.glass.lit { background: radial-gradient(130% 160% at 35% 125%, #6a4512 0%, #3d2711 42%, #1f150d 100%); }
+.track { position: relative; height: 100%; min-width: 100%; }
+.scale { position: absolute; inset: 14px 0 auto 0; height: 26px;
+	background:
+		repeating-linear-gradient(90deg, rgba(241,227,196,.75) 0 2px, transparent 2px var(--min)),
+		repeating-linear-gradient(90deg, rgba(241,227,196,.32) 0 1px, transparent 1px calc(var(--min) / 4));
+	background-size: 100% 26px, 100% 14px; background-repeat: no-repeat; opacity: .35; transition: opacity 1.6s var(--ease); }
+.glass.lit .scale { opacity: 1; }
+.lbl { position: absolute; top: 44px; transform: translateX(-50%); font: 500 var(--t1)/1 var(--cond); letter-spacing: .08em;
+	color: rgba(241,227,196,.72); white-space: nowrap; }
+.lbl.hour { color: var(--print); font-weight: 600; }
+.lit-span { position: absolute; left: 0; top: 14px; height: 26px; background: linear-gradient(90deg, rgba(242,181,68,0), rgba(242,181,68,.28)); }
+.seg { position: absolute; bottom: 18px; height: 42px; padding: 0 10px; border-left: 2px solid currentColor;
+	display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.seg::after { content: ""; position: absolute; left: 0; right: 4px; bottom: 0; height: 4px; border-radius: 0 3px 3px 0; background: currentColor; opacity: .55; }
+.seg b, .seg span { text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.seg b { font: 600 var(--t2)/1.15 var(--cond); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.seg span { font: 400 var(--t1)/1.2 var(--sans); color: var(--print); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; opacity: .85; }
+.seg.past { opacity: .5; }
+.needle { position: absolute; top: 8px; bottom: 8px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle);
+	transition: left .5s linear; }
+.glass-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 0 24px;
+	font: 500 var(--t3) var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 
-/* logs */
-#logs { position: fixed; inset: auto 0 0 0; height: 55vh; background: #0b0d10; border-top: 1px solid var(--line);
+/* ---- bands under the dial ---------------------------------------------------------- */
+.bands { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 40px 56px; margin: 40px var(--gut) 0; }
+.band-h { display: flex; align-items: baseline; gap: 12px; margin: 0 0 10px; font: 600 var(--t2)/1 var(--cond);
+	letter-spacing: .16em; text-transform: uppercase; color: var(--faint); }
+.band-h .link { margin-left: auto; }
+.row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 2px 10px;
+	padding: 12px 0; border-top: 1px solid var(--line); }
+.row .name { font: 500 var(--t3)/1.3 var(--sans); }
+.row .meta { grid-column: 2 / 4; font-size: var(--t2); color: var(--dim); }
+.row .err { grid-column: 2 / 4; font: 400 var(--t1)/1.45 ui-monospace, monospace; color: #ffc4b8; overflow-wrap: anywhere; }
+.row .acts { display: flex; gap: 6px; }
+.eye { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #3a2b20 0 35%, #22180f 80%); }
+.eye.ok { background: radial-gradient(circle, #d9fbe9 0 16%, var(--eye) 42%, #1d4a37 78%); }
+.eye.starting, .eye.stopping { background: radial-gradient(circle, #fff1c9 0 16%, var(--warn) 42%, #5a3b0c 78%); animation: warm 1.6s ease-in-out infinite; }
+.eye.degraded { background: radial-gradient(circle, #fff1c9 0 16%, var(--warn) 42%, #5a3b0c 78%); }
+.eye.failed { background: radial-gradient(circle, #ffd9d0 0 16%, var(--bad) 42%, #5a1a10 78%); }
+@keyframes warm { 50% { opacity: .45; } }
+.gpu { margin: 12px 0 0; font-size: var(--t2); color: var(--dim); }
+.gpu b { color: var(--print); font-weight: 500; }
+.q { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 11px 0; border-top: 1px solid var(--line); }
+.q .n { font: 500 var(--t2) var(--cond); color: var(--faint); }
+.q .t { font: 500 var(--t3)/1.3 var(--sans); overflow-wrap: anywhere; }
+.q .who { font: 600 var(--t2) var(--cond); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
+.q.more { color: var(--faint); font-size: var(--t2); }
+.empty { color: var(--faint); font-size: var(--t2); margin: 10px 0; }
+.codes { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 14px; }
+.code { background: var(--cab); border-radius: 14px; padding: 14px 12px 12px; text-align: center; }
+.code .qr { background: var(--print); border-radius: 8px; padding: 8px; width: 100%; max-width: 132px; margin: 0 auto 10px; }
+.code .qr img { display: block; width: 100%; mix-blend-mode: multiply; }
+.code b { display: block; font: 600 var(--t2)/1.2 var(--cond); letter-spacing: .08em; text-transform: uppercase; }
+.code a { font: 500 var(--t1)/1.3 var(--sans); overflow-wrap: anywhere; }
+.code .hint { margin-top: 4px; }
+.more-links { margin-top: 12px; font-size: var(--t2); color: var(--dim); }
+.more-links div { overflow-wrap: anywhere; padding: 3px 0; }
+
+/* ---- generic band content (library, settings) ---------------------------------------- */
+.sheet { margin: 32px var(--gut) 0; }
+.sheet + .sheet { margin-top: 48px; }
+.sheet-h { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin: 0 0 6px; font: 500 var(--t6)/1.1 var(--cond); letter-spacing: .01em; }
+.sheet-h .link, .sheet-h .btn { margin-left: auto; }
+.sheet-p { color: var(--dim); font-size: var(--t2); margin: 0 0 18px; max-width: 68ch; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px 56px; }
+.stats { display: flex; gap: 28px; flex-wrap: wrap; margin: 4px 0 18px; }
+.stat b { display: block; font: 500 var(--t6)/1 var(--cond); }
+.stat small { font: 500 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.stat.warn b { color: var(--warn); }
+.jobs { display: grid; gap: 10px; }
+.job { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.jobstate { font: 600 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.jobstate.running { color: var(--warn); }
+.jobstate.failed { color: var(--bad); }
+.jobstate.done { color: var(--eye); }
+details { margin-top: 14px; }
+summary { cursor: pointer; color: var(--dim); font-size: var(--t2); }
+summary:hover { color: var(--print); }
+.filelist { max-height: 260px; overflow: auto; margin: 8px 0; font: 400 var(--t1)/1.6 var(--sans); background: var(--cab);
+	border-radius: 10px; padding: 10px 12px; }
+.filelist label { display: flex; gap: 8px; align-items: flex-start; padding: 2px 0; overflow-wrap: anywhere; }
+input[type=checkbox] { accent-color: var(--amber); width: 16px; height: 16px; }
+.batch { padding: 14px 0; border-top: 1px solid var(--line); }
+.batch .t { font: 500 var(--t3) var(--sans); }
+.batch .meta { color: var(--dim); font-size: var(--t2); }
+.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; margin: 0; font-size: var(--t2); }
+.kv dt { color: var(--faint); font: 500 var(--t2) var(--cond); letter-spacing: .08em; text-transform: uppercase; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.commits { font-size: var(--t2); margin: 6px 0 10px; padding-left: 18px; color: var(--dim); }
+.commits code { color: var(--amber); font-size: var(--t1); }
+.hint { color: var(--faint); font-size: var(--t1); }
+
+/* songs */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.field, .toolbar input[type=search], .toolbar select, form.settings input, form.settings select, .welcome input[type=text], .welcome textarea {
+	background: var(--cab-2); border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; color: var(--print); font-size: var(--t3); }
+.toolbar input[type=search]:focus, form.settings input:focus, .welcome input:focus, .welcome textarea:focus { border-color: var(--amber); outline: none; }
+::placeholder { color: var(--faint); }
+.toolbar input[type=search] { flex: 1; min-width: 220px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 0; background: var(--cab); color: var(--dim); border-radius: 999px; padding: 7px 13px;
+	font: 500 var(--t2)/1 var(--cond); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.chip:hover { color: var(--print); }
+.chip.on { background: var(--cab-2); color: var(--print); box-shadow: inset 0 0 0 1px var(--amber); }
+.chip b { color: var(--faint); font-weight: 500; margin-left: 5px; }
+.count { color: var(--faint); font: 500 var(--t2) var(--cond); letter-spacing: .06em; margin-left: auto; }
+.song { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 18px; align-items: center; padding: 13px 0; border-top: 1px solid var(--line); }
+.song .t { font: 500 var(--t4)/1.25 var(--cond); letter-spacing: .01em; overflow-wrap: anywhere; }
+.song .m { color: var(--faint); font-size: var(--t1); overflow-wrap: anywhere; margin-top: 2px; }
+.song .badges { display: flex; gap: 4px 14px; flex-wrap: wrap; margin-top: 6px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font: 600 var(--t1)/1 var(--cond); letter-spacing: .08em;
+	text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+.badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.badge.good { color: var(--eye); }
+.badge.warn { color: var(--warn); }
+.badge.hot { color: var(--needle); }
+.song .acts { display: flex; gap: 2px 14px; flex-wrap: wrap; justify-content: flex-end; }
+.song input.rename { background: var(--cab-2); border: 1px solid var(--amber); border-radius: 8px; padding: 6px 10px;
+	color: var(--print); font: 500 var(--t4) var(--cond); width: 100%; }
+
+/* settings */
+form.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 22px; }
+form.settings input, form.settings select, .welcome input[type=text], .welcome textarea {
+	font: 400 var(--t3)/1.4 var(--sans); letter-spacing: 0; text-transform: none; }
+form.settings label, .welcome label { display: flex; flex-direction: column; gap: 6px; font: 500 var(--t2) var(--cond);
+	letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+form.settings label.check, .welcome label.check { flex-direction: row; align-items: center; gap: 10px; text-transform: none;
+	letter-spacing: 0; font: 400 var(--t3) var(--sans); color: var(--print); }
+form.settings select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%), linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+	background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; }
+.welcome { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; }
+.welcome > div > label { margin-bottom: 14px; }
+.welcome textarea { min-height: 170px; resize: vertical; line-height: 1.5; font: 400 var(--t3)/1.5 var(--sans); }
+.preview-wrap { align-self: start; }
+.preview { background: var(--cab); border-radius: 18px; padding: 22px 22px 18px; }
+.preview h3 { margin: 0 0 12px; text-align: center; font: 600 var(--t5)/1.15 var(--cond); }
+.preview ul { margin: 0 0 14px; padding-left: 1.1em; line-height: 1.5; font-size: var(--t3); }
+.preview li::marker { color: var(--amber); }
+.preview .pname { font: 500 var(--t2) var(--cond); letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.preview .pinput { background: var(--cab-2); border-radius: 10px; height: 40px; margin-top: 6px; }
+.preview .pok { margin: 14px auto 0; width: 120px; padding: 10px 0; border-radius: 999px; background: var(--amber); color: var(--amber-ink);
+	text-align: center; font: 600 var(--t2)/1 var(--cond); letter-spacing: .1em; }
+.preview-tag { font: 500 var(--t1) var(--cond); color: var(--faint); margin: 0 0 8px; letter-spacing: .12em; text-transform: uppercase; }
+
+/* logs drawer */
+#logs { position: fixed; inset: auto 0 0 0; height: 55vh; background: #140d0a; border-top: 1px solid var(--line);
 	z-index: 20; display: none; flex-direction: column; }
 #logs.open { display: flex; }
-#logs header { position: static; background: transparent; }
-#logs pre { flex: 1; margin: 0; padding: 12px 20px; overflow: auto; font: 12px/1.5 ui-monospace, monospace;
-	color: #c9d1dc; white-space: pre-wrap; overflow-wrap: anywhere; }
+#logs .bar { display: flex; align-items: center; gap: 10px; padding: 12px var(--gut); border-bottom: 1px solid var(--line); }
+#logs .bar b { font: 600 var(--t3) var(--cond); letter-spacing: .06em; }
+#logs .bar .sp { flex: 1; }
+#logs pre { flex: 1; margin: 0; padding: 14px var(--gut); overflow: auto; font: 400 var(--t1)/1.6 ui-monospace, monospace;
+	color: #e3d4b8; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-@media (max-width: 520px) {
-	main { padding: 12px; }
-	header { padding: 12px; }
-	.modes { width: 100%; }
-	.modes button { flex: 1; }
+@media (max-width: 760px) {
+	.welcome { grid-template-columns: 1fr; }
+	.controls { margin-left: 0; width: 100%; }
+	.band { flex: 1 1 100%; } .band button { flex: 1; padding: 11px 6px; white-space: nowrap; }
+	.controls .btn { flex: 1; padding: 12px; }
+	.now-title { font-size: var(--t6); }
+	.song { grid-template-columns: 1fr; } .song .acts { justify-content: flex-start; }
+	.glass { height: 140px; }
+}
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { transition-duration: 0s !important; animation: none !important; }
 }
 </style>
 </head>
 <body>
-<header>
-	<div class="brand">Open<span>Home</span>Karaoke</div>
-	<div class="host" id="host"></div>
-	<nav class="tabs"><a href="#overview" data-tab="overview">Overview</a><a href="#library" data-tab="library">Library</a></nav>
-	<div class="spacer"></div>
-	<div class="mode-pill" id="modepill">stopped</div>
+<header class="top">
+	<div class="brand">
+		<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="5" fill="#31211a"/><path d="M7 20a9 9 0 0 1 18 0" fill="none" stroke="#f2b544" stroke-width="2.4" stroke-linecap="round"/><path d="M16 21 19.5 12.5" stroke="#d9472f" stroke-width="2.4" stroke-linecap="round"/></svg>
+		OpenHomeKaraoke <small id="host"></small>
+	</div>
+	<nav class="tabs" aria-label="Sections">
+		<a href="#overview" data-tab="overview">On air</a>
+		<a href="#library" data-tab="library">Library</a>
+		<a href="#settings" data-tab="settings">Settings</a>
+	</nav>
+	<div class="controls">
+		<div class="band" id="modes" role="group" aria-label="Where karaoke plays">
+			<button data-mode="monitor" title="Video on this PC's screen">This monitor</button>
+			<button data-mode="tv" title="Hidden here; open the stream on the TV">TV</button>
+			<button data-mode="public" title="TV, plus guests from anywhere through the tunnel">Public</button>
+		</div>
+		<button class="btn primary" id="start">Start</button>
+		<button class="btn" id="stop">Stop</button>
+		<span id="modepill" hidden></span>
+	</div>
 </header>
+<div class="msg" id="ctlmsg"></div>
 
 <main id="tab-overview">
-	<section class="card wide">
-		<div class="control">
-			<div class="modes" id="modes">
-				<button data-mode="monitor"><b>This monitor</b><small>video on this PC's screen</small></button>
-				<button data-mode="tv"><b>TV stream</b><small>hidden here, open it on the TV</small></button>
-				<button data-mode="public"><b>Public</b><small>TV + guests from anywhere</small></button>
+	<section class="dial" id="dial" aria-label="Tonight">
+		<div class="dial-head">
+			<div>
+				<h1 class="now-title" id="now-title">Off</h1>
+				<div class="now-sub" id="now-sub"></div>
 			</div>
-			<button class="btn primary big" id="start">Start</button>
-			<button class="btn big" id="stop">Stop</button>
+			<div class="now-clock num" id="now-clock"></div>
 		</div>
-		<div class="msg" id="ctlmsg"></div>
-	</section>
-
-	<section class="card">
-		<h2>Services <button class="btn small act" data-logs="panel">panel log</button></h2>
-		<div id="services"></div>
-	</section>
-
-	<section class="card">
-		<h2>Join</h2>
-		<div id="join"><p class="empty">Start karaoke to get the join links.</p></div>
-	</section>
-
-	<section class="card">
-		<h2>Now</h2>
-		<div id="activity"><p class="empty">Not running.</p></div>
-	</section>
-
-
-	<section class="card">
-		<h2>Updates <button class="btn small act" id="fetch">check now</button></h2>
-		<div id="updates"><p class="empty">Loading…</p></div>
-	</section>
-
-	<section class="card wide">
-	<h2>Guest welcome</h2>
-	<div class="welcome-grid">
-		<div>
-			<label class="check"><input type="checkbox" id="w-auto"> Show it automatically when a phone first opens the karaoke page</label>
-			<label>Title <input type="text" id="w-title" maxlength="200"></label>
-			<label>Rules: one per line, **bold** for emphasis <textarea id="w-text" maxlength="4000"></textarea></label>
-			<label>Name field label <input type="text" id="w-name" maxlength="100"></label>
-			<div class="row">
-				<button class="btn primary" id="w-save">Save</button>
-				<span class="hint">No restart needed: phones get it on their next page load. Phones that
-					already dismissed the old message see the new one once.</span>
-			</div>
-			<div class="msg" id="w-msg"></div>
+		<div class="glass" id="glass" tabindex="0" aria-label="Tonight's songs, scroll sideways">
+			<div class="track" id="track"></div>
 		</div>
-		<div>
-			<p class="preview-tag">Preview</p>
-			<div class="preview" id="w-preview"></div>
-		</div>
+	</section>
+
+	<div class="bands">
+		<section>
+			<h2 class="band-h">The set <button class="link" data-logs="panel">panel log</button></h2>
+			<div id="services"></div>
+			<p class="gpu" id="gpu"></p>
+		</section>
+		<section>
+			<h2 class="band-h">Up next</h2>
+			<div id="activity"><p class="empty">Not running.</p></div>
+		</section>
+		<section>
+			<h2 class="band-h">Join</h2>
+			<div id="join"><p class="empty">Start karaoke to get the join codes.</p></div>
+		</section>
 	</div>
-</section>
-
-	<section class="card wide">
-		<h2>Settings</h2>
-		<form class="settings" id="settings" autocomplete="off"></form>
-		<div class="row" style="margin-top:12px">
-			<button class="btn primary" id="savesettings">Save</button>
-			<span class="hint" id="settingshint">Changes apply the next time karaoke starts.</span>
-		</div>
-		<div class="msg" id="setmsg"></div>
-	</section>
 </main>
 
 <main id="tab-library" hidden>
-	<section class="card">
-		<h2>Maintenance <button class="btn small act" id="librefresh">rescan</button></h2>
-		<div id="library"><p class="empty">Scanning…</p></div>
+	<section class="sheet">
+		<div class="split">
+			<div>
+				<h2 class="sheet-h">Maintenance <button class="link" id="librefresh">rescan</button></h2>
+				<div id="library"><p class="empty">Scanning…</p></div>
+			</div>
+			<div>
+				<h2 class="sheet-h">Trash <button class="link" id="trashrefresh">refresh</button></h2>
+				<p class="sheet-p">Deleted songs and cleaned-up files wait here until you restore or empty them.</p>
+				<div id="trash"><p class="empty">Loading…</p></div>
+			</div>
+		</div>
 	</section>
-
-	<section class="card">
-		<h2>Trash <button class="btn small act" id="trashrefresh">refresh</button></h2>
-		<div id="trash"><p class="empty">Loading…</p></div>
-	</section>
-
-	<section class="card wide">
-		<h2>Songs <button class="btn small act" id="songsrefresh">rescan</button></h2>
+	<section class="sheet">
+		<h2 class="sheet-h">Songs <button class="link" id="songsrefresh">rescan</button></h2>
 		<div class="toolbar">
-			<input type="search" id="songq" placeholder="Search title or ID" autocomplete="off">
-			<select id="songsort">
+			<input type="search" id="songq" placeholder="Search title or ID" autocomplete="off" aria-label="Search songs">
+			<select id="songsort" class="field" aria-label="Sort">
 				<option value="title">Title A-Z</option>
 				<option value="added">Recently added</option>
 				<option value="size">Largest</option>
 				<option value="duration">Longest</option>
 			</select>
 		</div>
-		<div class="toolbar"><div class="chips" id="songfilters"></div><span class="count" id="songcount"></span></div>
-		<div class="msg" id="songmsg"></div>
+		<div class="toolbar"><div class="chips" id="songfilters"></div><span class="count num" id="songcount"></span></div>
+		<div class="msg" id="songmsg" style="margin-left:0;margin-right:0"></div>
 		<div id="songs"><p class="empty">Loading…</p></div>
 	</section>
 </main>
 
+<main id="tab-settings" hidden>
+	<section class="sheet">
+		<h2 class="sheet-h">Guest welcome</h2>
+		<p class="sheet-p">What a phone shows the first time it opens the karaoke page. No restart needed: phones get it on their next page load, and phones that dismissed an older message see the new one once.</p>
+		<div class="welcome">
+			<div>
+				<label class="check"><input type="checkbox" id="w-auto"> Show it automatically on a phone's first visit</label>
+				<label>Title <input type="text" id="w-title" maxlength="200"></label>
+				<label>Rules: one per line, **bold** for emphasis <textarea id="w-text" maxlength="4000"></textarea></label>
+				<label>Name field label <input type="text" id="w-name" maxlength="100"></label>
+				<div class="inline"><button class="btn primary" id="w-save">Save message</button></div>
+				<div class="msg" id="w-msg" style="margin-left:0;margin-right:0"></div>
+			</div>
+			<div class="preview-wrap">
+				<p class="preview-tag">On the phone</p>
+				<div class="preview" id="w-preview"></div>
+			</div>
+		</div>
+	</section>
+	<section class="sheet">
+		<h2 class="sheet-h">Machine</h2>
+		<p class="sheet-p" id="settingshint">These apply the next time karaoke starts.</p>
+		<form class="settings" id="settings" autocomplete="off"></form>
+		<div class="inline" style="margin-top:16px"><button class="btn primary" id="savesettings">Save settings</button></div>
+		<div class="msg" id="setmsg" style="margin-left:0;margin-right:0"></div>
+	</section>
+	<section class="sheet">
+		<h2 class="sheet-h">Updates <button class="link" id="fetch">check now</button></h2>
+		<div id="updates"><p class="empty">Loading…</p></div>
+	</section>
+</main>
 
-<div id="logs">
-	<header><b id="logtitle">Log</b><div class="spacer"></div>
-		<button class="btn small" id="logrefresh">refresh</button>
-		<button class="btn small" id="logclose">close</button></header>
+<div id="logs" role="dialog" aria-label="Log">
+	<div class="bar"><b id="logtitle">Log</b><span class="sp"></span>
+		<button class="btn small" id="logrefresh">Refresh</button>
+		<button class="btn small" id="logclose">Close</button></div>
 	<pre id="logtext"></pre>
 </div>
 
@@ -342,7 +432,11 @@ document.querySelectorAll('#modes button').forEach(b => b.addEventListener('clic
 	selMode = b.dataset.mode; paintModes();
 }));
 function paintModes() {
-	document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('sel', b.dataset.mode === selMode));
+	const live = status && status.mode;
+	document.querySelectorAll('#modes button').forEach(b => {
+		b.classList.toggle('sel', b.dataset.mode === selMode);
+		b.classList.toggle('live', b.dataset.mode === selMode && b.dataset.mode === live);
+	});
 	const running = status && status.mode;
 	$('#start').textContent = !running ? 'Start' : running === selMode ? 'Restart' : 'Switch';
 }
@@ -358,20 +452,132 @@ $('#stop').addEventListener('click', async () => {
 	const r = await post('/api/stop'); say($('#ctlmsg'), r.error); tick();
 });
 
-// ---- status ---------------------------------------------------------------------------
+// ---- singers: one fixed dial colour each, everywhere ------------------------------------
+const SINGER = ['#9fd0f0', '#e9a6c9', '#b9d98a', '#f0a77a', '#c6b3f5', '#8fd6c8', '#f5d77a', '#f28b82'];
+function singerColor(name) {
+	let x = 0;
+	for (const c of String(name || '?')) x = (x * 31 + c.codePointAt(0)) >>> 0;
+	return SINGER[x % SINGER.length];
+}
+
+// ---- the dial: tonight as a tuning scale, scrollable sideways -------------------------
+const PX_MIN = 120;                       // scale: pixels per minute
+let dialKey = '', clockSkew = 0, dialHeldUntil = 0, dialT0 = 0, dialProgrammatic = false;
+const fmtHM = (t) => new Date(t * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
+const serverNow = () => (Date.now() + clockSkew) / 1000;
+
+function paintDial(st) {
+	const tl = st.timeline, on = !!st.mode, cur = tl.current;
+	clockSkew = tl.now * 1000 - Date.now();
+	$('#glass').classList.toggle('lit', on);
+	const title = $('#now-title'), sub = $('#now-sub'), clk = $('#now-clock');
+	if (!on) {
+		title.textContent = 'Off';
+		sub.textContent = 'Choose where it plays, then press Start.';
+		clk.replaceChildren();
+	} else if (cur) {
+		title.textContent = cur.title;
+		sub.replaceChildren('sung by ', h('b', {style: `color:${singerColor(cur.user)}`}, cur.user || 'someone'));
+		clk.replaceChildren(h('small', {}, cur.paused ? 'paused' : 'playing'), `${clock(cur.position)} / ${clock(cur.length)}`);
+	} else {
+		title.textContent = 'Nothing playing';
+		sub.textContent = 'Queue a song from a phone: scan a code below.';
+		clk.replaceChildren(h('small', {}, 'now'), fmtHM(tl.now));
+	}
+	const items = tl.history.map(x => ({title: x.title, user: x.user, start: x.start, end: x.end, kind: 'past'}));
+	let t = tl.now;
+	if (cur) {
+		const end = cur.start + (cur.length || 240);
+		items.push({title: cur.title, user: cur.user, start: cur.start, end, kind: 'now'});
+		t = Math.max(end, tl.now);
+	}
+	for (const q of tl.queue) {
+		const d = q.duration || 240;
+		items.push({title: q.title, user: q.user, start: t, end: t + d, kind: 'next'});
+		t += d;
+	}
+	const key = on + JSON.stringify(items.map(i => [i.title, i.user, i.kind, Math.round(i.start / 10), Math.round(i.end / 10)]));
+	if (key !== dialKey) { dialKey = key; buildDial(items, tl.now, on); }
+	moveNeedle();
+}
+
+function buildDial(items, now, on) {
+	const track = $('#track'), glass = $('#glass');
+	const first = Math.min(now - 6 * 60, ...items.map(i => i.start));
+	const last = Math.max(now + 10 * 60, ...items.map(i => i.end));
+	dialT0 = Math.floor(first / 60) * 60;
+	const t1 = Math.ceil(last / 60) * 60 + 60;
+	const x = (t) => (t - dialT0) / 60 * PX_MIN;
+	track.style.width = x(t1) + 'px';
+	track.style.setProperty('--min', PX_MIN + 'px');
+	const kids = [h('div', {class: 'scale'}), h('div', {class: 'lit-span', id: 'litspan'})];
+	for (let m = dialT0; m <= t1; m += 60) {
+		const d = new Date(m * 1000);
+		kids.push(h('span', {class: 'lbl num' + (d.getMinutes() % 15 === 0 ? ' hour' : ''), style: `left:${x(m)}px`}, fmtHM(m)));
+	}
+	for (const i of items) {
+		const w = Math.max(24, x(i.end) - x(i.start) - 4);
+		kids.push(h('div', {class: 'seg ' + i.kind, style: `left:${x(i.start)}px;width:${w}px;color:${singerColor(i.user)}`,
+			title: `${i.user || '?'}: ${i.title} · ${fmtHM(i.start)}`},
+			h('span', {}, i.title), h('b', {}, i.user || '?')));
+	}
+	kids.push(h('div', {class: 'needle', id: 'needle'}));
+	if (!on) kids.push(h('div', {class: 'glass-empty'}, 'Radio off'));
+	else if (!items.length) kids.push(h('div', {class: 'glass-empty'}, 'The queue is empty'));
+	track.replaceChildren(...kids);
+	const first_build = !glass.dataset.built;
+	glass.dataset.built = '1';
+	moveNeedle(first_build);
+}
+
+function moveNeedle(jump) {
+	const n = document.getElementById('needle'), lit = document.getElementById('litspan'), glass = $('#glass');
+	if (!n) return;
+	const x = (serverNow() - dialT0) / 60 * PX_MIN;
+	if (jump) n.style.transition = 'none';
+	n.style.left = x + 'px';
+	if (lit) lit.style.width = x + 'px';
+	if (jump) { n.offsetWidth; n.style.transition = ''; }
+	if (Date.now() > dialHeldUntil) {               // follow the needle unless someone is browsing
+		dialProgrammatic = true;
+		glass.scrollLeft = Math.max(0, x - glass.clientWidth * 0.3);
+		requestAnimationFrame(() => { dialProgrammatic = false; });
+	}
+}
+(() => {
+	const glass = $('#glass');
+	const hold = () => { dialHeldUntil = Date.now() + 8000; };
+	glass.addEventListener('wheel', (e) => {        // a mouse wheel scrolls the dial sideways
+		if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { glass.scrollLeft += e.deltaY; e.preventDefault(); }
+		hold();
+	}, {passive: false});
+	glass.addEventListener('pointerdown', hold);
+	glass.addEventListener('scroll', () => { if (!dialProgrammatic) hold(); });
+	glass.addEventListener('keydown', (e) => {
+		if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { glass.scrollLeft += (e.key === 'ArrowLeft' ? -1 : 1) * PX_MIN; hold(); e.preventDefault(); }
+	});
+	setInterval(moveNeedle, 500);
+})();
+
+// ---- the set (services), up next, join -----------------------------------------------
 function paintServices(svc) {
 	const box = $('#services'); box.replaceChildren();
+	const running = status && status.mode, want = running || selMode;
+	const relevant = (key, s) => s.health === 'failed' || s.health === 'degraded' || key === 'asr'
+		|| (key === 'app' && want === 'monitor') || (key === 'app-tv' && (want === 'tv' || want === 'public'))
+		|| (key === 'tunnel' && want === 'public');
 	for (const [key, s] of Object.entries(svc)) {
-		const meta = [s.health, s.note, s.uptime != null && s.health === 'ok' ? `up ${dur(s.uptime)}` : null,
+		if (!relevant(key, s)) continue;
+		const meta = [s.health === 'ok' ? (s.uptime != null ? `on for ${dur(s.uptime)}` : 'on') : s.health, s.note,
 		              s.restarts ? `${s.restarts} restart${s.restarts > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ');
-		box.append(h('div', {class: 'svc'},
-			h('span', {class: `dot ${s.health}`}),
+		box.append(h('div', {class: 'row'},
+			h('span', {class: `eye ${s.health}`, title: s.health}),
 			h('span', {class: 'name'}, s.label),
-			h('span', {class: 'btns'},
-				s.health !== 'stopped' ? h('button', {class: 'btn small', onclick: async () => {
+			h('span', {class: 'acts'},
+				s.health !== 'stopped' ? h('button', {class: 'link', onclick: async () => {
 					const r = await post('/api/restart', {service: key}); say($('#ctlmsg'), r.error); tick();
 				}}, 'restart') : null,
-				h('button', {class: 'btn small', 'data-logs': key}, 'log')),
+				h('button', {class: 'link', 'data-logs': key}, 'log')),
 			h('span', {class: 'meta'}, meta),
 			s.error ? h('span', {class: 'err'}, s.error) : null));
 	}
@@ -379,46 +585,39 @@ function paintServices(svc) {
 
 function paintJoin(join) {
 	const box = $('#join');
-	if (!join.length) { box.replaceChildren(h('p', {class: 'empty'}, 'Start karaoke to get the join links.')); return; }
+	if (!join.length) { box.dataset.key = ''; box.replaceChildren(h('p', {class: 'empty'}, 'Start karaoke to get the join codes.')); return; }
 	const key = JSON.stringify(join);
 	if (box.dataset.key === key) return;            // don't reload QR images every tick
 	box.dataset.key = key;
+	const short = {'Phone (same Wi-Fi)': 'Phones', 'TV browser': 'TV', 'Guests, from anywhere': 'From anywhere'};
+	const voice = (j) => j.label.startsWith('Phone with voice');
 	box.replaceChildren(
-		h('div', {class: 'join'}, join.filter(j => j.qr).map(j => h('div', {class: 'tile'},
-			h('img', {src: '/api/qr?data=' + encodeURIComponent(j.url), alt: ''}),
-			h('div', {class: 'lbl'}, j.label), h('div', {class: 'url'}, h('a', {href: j.url, target: '_blank', rel: 'noreferrer'}, j.url))))),
-		h('div', {class: 'links'}, join.filter(j => !j.qr).map(j =>
-			h('div', {}, `${j.label}: `, h('a', {href: j.url, target: '_blank', rel: 'noreferrer'}, j.url)))));
+		h('div', {class: 'codes'}, join.filter(j => j.qr).map(j => h('div', {class: 'code'},
+			h('div', {class: 'qr'}, h('img', {src: '/api/qr?data=' + encodeURIComponent(j.url), alt: `QR code for ${j.url}`})),
+			h('b', {}, voice(j) ? 'Voice search' : short[j.label] || j.label.replace(/ \(.*\)$/, '')),
+			h('a', {href: j.url, target: '_blank', rel: 'noreferrer'}, j.url.replace(/^https?:\/\//, '')),
+			voice(j) ? h('div', {class: 'hint'}, 'accept the certificate once') : null))),
+		h('div', {class: 'more-links'},
+			join.filter(j => !j.qr).map(j => h('div', {}, `${j.label}: `, h('a', {href: j.url, target: '_blank', rel: 'noreferrer'}, j.url.replace(/^https?:\/\//, ''))))));
 }
 
 function paintActivity(act) {
-	const box = $('#activity'), a = act.app, g = act.gpu;
-	if (!a && !g) { box.replaceChildren(h('p', {class: 'empty'}, 'Not running.')); return; }
-	const kids = [];
-	if (a && a.now_playing) {
-		const pct = a.length ? Math.min(100, 100 * (a.position || 0) / a.length) : 0;
-		kids.push(h('div', {class: 'np-title'}, a.now_playing),
-			h('div', {class: 'np-user'}, `sung by ${a.now_playing_user || '?'}${a.is_paused ? ' · paused' : ''}`),
-			h('div', {class: 'bar'}, h('i', {style: `width:${pct}%`})),
-			h('div', {class: 'times'}, h('span', {}, clock(a.position)), h('span', {}, clock(a.length))));
-	} else if (a) {
-		kids.push(h('div', {class: 'np-title empty'}, 'Nothing playing'));
-	}
-	if (a && a.queue.length)
-		kids.push(h('ol', {class: 'queue'}, a.queue.slice(0, 8).map(q => h('li', {}, h('span', {}, q.title), h('em', {}, q.user)))),
-			a.queue.length > 8 ? h('div', {class: 'hint'}, `+${a.queue.length - 8} more`) : null);
-	const kv = [];
-	if (a) kv.push(['Library', `${a.songs} songs`], ['Queue', `${a.queue.length} waiting`]);
-	if (a && a.downloading) kv.push(['Downloading', `${a.downloading}`]);
-	if (a && a.vocal_split_pending) kv.push(['Vocal splits queued', `${a.vocal_split_pending}`]);
+	const box = $('#activity'), a = act.app, g = act.gpu, gpu = $('#gpu');
 	if (g) {
 		const w = g.activity;
-		kv.push(['GPU', [w.split && `splitting ${w.split}`, w.karaoke && `building color-wipe for ${w.karaoke}`,
-			w.karaoke_waiting && `${w.karaoke_waiting} more queued`, w.asr_running && 'voice search'].filter(Boolean).join(' · ') || 'idle']);
-		kv.push(['Model', `Whisper ${g.model} on ${g.device}${g.gpu_mem_mb != null ? ` · ${(g.gpu_mem_mb / 1000).toFixed(1)} GB` : ''}`]);
-	}
-	kids.push(h('dl', {class: 'kv'}, kv.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])));
-	box.replaceChildren(...kids);
+		const doing = [w.split && `splitting ${w.split}`, w.karaoke && `building the lyrics for ${w.karaoke}`,
+			w.karaoke_waiting && `${w.karaoke_waiting} more waiting`, w.asr_running && 'listening to a voice search'].filter(Boolean).join(' · ');
+		gpu.replaceChildren('GPU: ', h('b', {}, doing || 'idle'), ` · Whisper ${g.model}`);
+	} else gpu.textContent = '';
+	if (!a) { box.replaceChildren(h('p', {class: 'empty'}, 'Not running.')); return; }
+	const rows = a.queue.slice(0, 6).map((q, i) => h('div', {class: 'q'},
+		h('span', {class: 'n num'}, i + 1), h('span', {class: 't'}, q.title),
+		h('span', {class: 'who', style: `color:${singerColor(q.user)}`}, q.user)));
+	if (!a.queue.length) rows.push(h('p', {class: 'empty'}, 'Nobody in line yet.'));
+	if (a.queue.length > 6) rows.push(h('div', {class: 'q more'}, h('span'), h('span', {}, `and ${a.queue.length - 6} more`), h('span')));
+	const extra = [`${a.songs} songs in the library`, a.downloading && `${a.downloading} downloading`,
+		a.vocal_split_pending && `${a.vocal_split_pending} vocal splits waiting`].filter(Boolean).join(' · ');
+	box.replaceChildren(...rows, h('p', {class: 'gpu'}, extra));
 }
 
 const jobBtns = {};
@@ -445,14 +644,12 @@ function paintJobs(jobs) {
 async function tick() {
 	try { status = await api('/api/status'); } catch (e) { return; }
 	$('#host').textContent = status.host;
-	const pill = $('#modepill');
-	pill.textContent = status.mode ? {monitor: 'on this monitor', tv: 'streaming to TV', public: 'public'}[status.mode] : 'stopped';
-	pill.classList.toggle('on', !!status.mode);
+	document.title = status.mode ? `On air · ${{monitor: 'this monitor', tv: 'TV', public: 'public'}[status.mode]}` : 'Karaoke Panel';
 	if (selMode == null) selMode = status.mode || status.last_mode;
 	paintModes();
 	$('#stop').disabled = !status.mode && Object.values(status.services).every(s => s.health === 'stopped');
 	if (status.legacy_session) say($('#ctlmsg'), "start-karaoke.sh is running (tmux session 'OHK'). Stop it before starting from here: tmux kill-session -t OHK", 'info');
-	paintServices(status.services); paintJoin(status.join); paintActivity(status.activity); paintJobs(status.jobs);
+	paintDial(status); paintServices(status.services); paintJoin(status.join); paintActivity(status.activity); paintJobs(status.jobs);
 }
 
 // ---- library --------------------------------------------------------------------------
@@ -463,7 +660,7 @@ function jobButton(name, label) {
 		if (r.error) alertIn($('#library'), r.error); tick();
 	}}, label);
 	jobBtns[name] = b;
-	return [b, h('span', {class: 'jobstate', id: 'job-' + name}), h('button', {class: 'btn small', 'data-logs': 'job:' + name}, 'log')];
+	return [b, h('span', {class: 'jobstate', id: 'job-' + name}), h('button', {class: 'link', 'data-logs': 'job:' + name}, 'log')];
 }
 function alertIn(box, text) { const m = h('div', {class: 'msg show err'}, text); box.append(m); setTimeout(() => m.remove(), 8000); }
 
@@ -474,8 +671,8 @@ async function loadLibrary() {
 	const kids = [h('div', {class: 'stats'},
 		stat(L.songs, 'songs in the app'), stat(L.missing_stems.length, 'no vocal stems', 1),
 		stat(L.missing_colorwipe.length, 'no color-wipe', 1), stat(L.cleanable.length, `leftovers · ${L.size_mb} MB`, 1))];
-	kids.push(h('div', {class: 'row'}, jobButton('presplit', 'Pre-split vocals')),
-		h('div', {class: 'row', style: 'margin-top:8px'}, jobButton('gen-missing', 'Generate missing color-wipes')));
+	kids.push(h('div', {class: 'jobs'}, h('div', {class: 'job'}, jobButton('presplit', 'Pre-split vocals')),
+		h('div', {class: 'job'}, jobButton('gen-missing', 'Generate missing color-wipes'))));
 	if (L.cleanable.length) {
 		const boxes = L.cleanable.map(f => h('input', {type: 'checkbox', checked: true, value: f}));
 		kids.push(h('details', {open: true}, h('summary', {}, `Clean up ${L.cleanable.length} leftovers (moved to a trash folder, not deleted)`),
@@ -511,7 +708,7 @@ function paintUpdates(U) {
 		h('dt', {}, 'yt-dlp'), h('dd', {}, `${y.version || 'missing'}${y.solver ? ` · solver ${y.solver}` : ' · NO challenge solver'}`),
 		h('dt', {}, 'deno'), h('dd', {}, y.deno ? 'installed' : 'MISSING — YouTube downloads will fail'),
 		h('dt', {}, 'Auto-update'), h('dd', {}, y.last_auto_update ? `last ran ${y.last_auto_update} (daily, when the app starts)` : 'never ran'))];
-	kids.push(h('div', {class: 'row', style: 'margin-top:10px'}, jobButton('ytdlp-update', 'Update yt-dlp now')));
+	kids.push(h('div', {class: 'job', style: 'margin:12px 0 22px'}, jobButton('ytdlp-update', 'Update yt-dlp now')));
 	kids.push(h('dl', {class: 'kv'},
 		h('dt', {}, 'Code'), h('dd', {}, `${g.branch} · ${g.head}${g.dirty ? ' · uncommitted changes' : ''}`),
 		h('dt', {}, 'Checked'), h('dd', {}, g.last_fetch ? new Date(g.last_fetch * 1000).toLocaleString() : 'never')));
@@ -553,7 +750,7 @@ async function loadSettings() {
 			: h('input', {name: k, type, value: S[k] ?? ''}))),
 		h('label', {}, `Admin password (${S.admin_password_set ? 'set; leave blank to keep' : 'not set: required for Public'})`,
 			h('input', {name: 'admin_password', type: 'password', placeholder: S.admin_password_set ? '••••••' : ''})),
-		S.admin_password_set ? h('label', {class: 'check'}, h('input', {type: 'checkbox', name: 'admin_password_clear'}), 'Remove the admin password') : null);
+		...(S.admin_password_set ? [h('label', {class: 'check'}, h('input', {type: 'checkbox', name: 'admin_password_clear'}), 'Remove the admin password')] : []));
 }
 $('#savesettings').addEventListener('click', async () => {
 	const data = {};
@@ -576,7 +773,7 @@ function paintPreview() {
 	$('#w-preview').replaceChildren(
 		h('h3', {}, $('#w-title').value),
 		h('ul', {}, lines.map(l => h('li', {}, boldLine(l)))),
-		h('div', {class: 'pname'}, $('#w-name').value), h('div', {class: 'pinput'}));
+		h('div', {class: 'pname'}, $('#w-name').value), h('div', {class: 'pinput'}), h('div', {class: 'pok'}, 'OK'));
 }
 async function loadWelcome() {
 	const S = await api('/api/settings');
@@ -596,11 +793,11 @@ $('#w-save').addEventListener('click', async () => {
 
 // ---- tabs ---------------------------------------------------------------------------
 function showTab() {
-	const tab = location.hash === '#library' ? 'library' : 'overview';
+	const tab = ['#library', '#settings'].includes(location.hash) ? location.hash.slice(1) : 'overview';
 	document.querySelectorAll('[data-tab]').forEach(a => a.classList.toggle('on', a.dataset.tab === tab));
-	$('#tab-overview').hidden = tab !== 'overview';
-	$('#tab-library').hidden = tab !== 'library';
+	for (const t of ['overview', 'library', 'settings']) $('#tab-' + t).hidden = t !== tab;
 	if (tab === 'library') { loadSongs(); loadTrash(); loadLibrary(); }
+	if (tab === 'settings') { loadUpdates(); }
 }
 window.addEventListener('hashchange', showTab);
 
@@ -659,7 +856,7 @@ function songRow(s) {
 		s.hidden ? h('span', {class: 'badge warn'}, 'hidden from app: rename to fix') : null);
 	const left = h('div', {}, title, meta, badges);
 	const locked = playing || queued;
-	const btn = (label, onclick, opts) => h('button', Object.assign({class: 'btn small', onclick}, opts || {}), label);
+	const btn = (label, onclick, opts) => h('button', Object.assign({class: 'link', onclick}, opts || {}), label);
 
 	const del = btn('Delete', () => {
 		if (del.dataset.armed) {
@@ -711,9 +908,9 @@ async function loadTrash() {
 			const r = await post('/api/trash/empty', {batch: b.id}); if (r.error) alertIn(box, r.error); loadTrash();
 		}}, 'Delete forever');
 		return h('div', {class: 'batch'},
-			h('div', {}, h('b', {}, new Date(b.when * 1000).toLocaleString()), ` · ${b.files.length} file(s) · ${b.size_mb} MB`),
+			h('div', {class: 't'}, new Date(b.when * 1000).toLocaleString([], {hour12: false})), h('div', {class: 'meta'}, `${b.files.length} file(s) · ${b.size_mb} MB`),
 			h('details', {}, h('summary', {}, 'files'), h('div', {class: 'filelist'}, b.files.map(f => h('div', {}, f)))),
-			h('div', {class: 'row', style: 'margin-top:6px'},
+			h('div', {class: 'inline'},
 				h('button', {class: 'btn small', onclick: async () => {
 					const r = await post('/api/trash/restore', {batch: b.id});
 					alertIn(box, r.error || (r.skipped.length ? `Restored ${r.restored.length}; ${r.skipped.length} skipped (already exist)` : `Restored ${r.restored.length} file(s).`));

@@ -119,6 +119,66 @@ def result(err, **extra):
 	return (jsonify(ok = False, error = err), 400) if err else jsonify(ok = True, **extra)
 
 
+# ---- tonight's timeline (the dial) ------------------------------------------------------
+# The app only knows the current song and the queue, so the panel remembers what has been
+# sung since it started: a background poll notes each song change.
+TIMELINE = {'history': [], 'current': None}
+_tl_lock = threading.Lock()
+
+
+def _watch_app():
+	while True:
+		st = S.http_json(f'http://127.0.0.1:{C.APP_PORT}/ohk_status', timeout = 2)
+		now = time.time()
+		with _tl_lock:
+			cur = TIMELINE['current']
+			key = (st or {}).get('now_playing_file') or (st or {}).get('now_playing')
+			if cur and cur['key'] != key:
+				# the previous song ended (or was skipped) at about now
+				TIMELINE['history'].append({'title': cur['title'], 'user': cur['user'],
+				                            'start': cur['start'], 'end': now})
+				TIMELINE['history'] = TIMELINE['history'][-40:]
+				TIMELINE['current'] = cur = None
+			if st and key:
+				# start = now - position on every poll: follows seeks, and while paused the
+				# rest of the song (and everything after it) slides later, as it really does
+				pos = st.get('position') or 0
+				TIMELINE['current'] = {'key': key, 'title': st['now_playing'], 'user': st.get('now_playing_user'),
+				                       'start': now - pos, 'length': st.get('length'), 'position': pos,
+				                       'paused': st.get('is_paused')}
+		time.sleep(3)
+
+
+def _durations_for(queue):
+	"""Lengths of queued songs, from the library's ffprobe cache. Old app builds report only
+	titles, so fall back to matching the title."""
+	root = C.song_dir(C.load())
+	try:
+		media = [f for f in os.listdir(root) if library._is_media(f)]
+	except OSError:
+		return [None] * len(queue)
+	by_title = {}
+	for m in media:
+		by_title.setdefault(library.split_name(m)[0], m)
+	names = [q.get('file') if q.get('file') in media else by_title.get(q.get('title')) for q in queue]
+	d = library._durations(root, [n for n in names if n])
+	return [d.get(n) if n else None for n in names]
+
+
+def timeline(app_st):
+	with _tl_lock:
+		hist = list(TIMELINE['history'])
+		cur = dict(TIMELINE['current']) if TIMELINE['current'] else None
+	queue = (app_st or {}).get('queue') or []
+	durs = _durations_for(queue) if queue else []
+	return {
+		'now': time.time(),
+		'history': hist,
+		'current': cur and {k: cur[k] for k in ('title', 'user', 'start', 'length', 'position', 'paused')},
+		'queue': [{'title': q['title'], 'user': q['user'], 'duration': d} for q, d in zip(queue, durs)],
+	}
+
+
 # ---- status ---------------------------------------------------------------------------
 def lan_ip():
 	try:
@@ -207,6 +267,7 @@ def api_status():
 		jobs[name] = {'label': label, 'state': state}
 
 	return jsonify(
+		timeline = timeline(live['app']),
 		mode = mode, last_mode = cfg['mode'], services = svc, join = join,
 		activity = {'app': live['app'], 'gpu': live['asr']}, jobs = jobs,
 		legacy_session = S.legacy_session(),
@@ -481,6 +542,14 @@ def index():
 	return send_from_directory(STATIC, 'index.html')
 
 
+@app.get('/static/<path:name>')
+def static_file(name):
+	resp = send_from_directory(STATIC, name)
+	if name.startswith('fonts/'):
+		resp.headers['Cache-Control'] = 'max-age=31536000, immutable'
+	return resp
+
+
 @app.after_request
 def headers(resp):
 	resp.headers['X-Frame-Options'] = 'DENY'
@@ -504,6 +573,7 @@ def _serve(host):
 
 def main():
 	S.install()
+	threading.Thread(target = _watch_app, daemon = True).start()
 	hosts = ['127.0.0.1'] + ts_self(refresh = True)['ips']
 	threads = [threading.Thread(target = _serve, args = (h,), daemon = True) for h in hosts]
 	for t in threads:

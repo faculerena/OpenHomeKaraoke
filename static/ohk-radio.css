@@ -1,0 +1,176 @@
+/* Radio de living: the guests' phone UI, in the same world as the admin panel.
+   Loaded after bulma-dark.css and custom.css; it re-skins Bulma's pieces and the page's own
+   inline styles, so every ID and JS hook stays as it was. */
+@font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url(/static/fonts/barlow-400.woff2) format('woff2'); }
+@font-face { font-family: Barlow; font-weight: 500; font-display: swap; src: url(/static/fonts/barlow-500.woff2) format('woff2'); }
+@font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url(/static/fonts/barlow-600.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 500; font-display: swap; src: url(/static/fonts/barlowcondensed-500.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-weight: 600; font-display: swap; src: url(/static/fonts/barlowcondensed-600.woff2) format('woff2'); }
+
+:root {
+	--ground: #1d1410; --cab: #261a13; --cab-2: #31211a; --line: #4a3326;
+	--print: #f1e3c4; --dim: #c4ad8e; --faint: #a08a6d;
+	--amber: #f2b544; --amber-ink: #2a1a0c; --needle: #d9472f; --eye: #6fc39f; --bad: #ef6a52;
+	--sans: Barlow, 'Noto Sans', 'Noto Sans CJK JP', system-ui, sans-serif;
+	--cond: 'Barlow Condensed', Barlow, 'Noto Sans CJK JP', system-ui, sans-serif;
+	--t1: 13px; --t2: 15px; --t3: 17px; --t4: 20px; --t5: 26px; --t6: 34px;
+	color-scheme: dark;
+}
+html, body { background: var(--ground) !important; color: var(--print); font-family: var(--sans); font-size: var(--t3); }
+body { -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+::selection { background: var(--amber); color: var(--amber-ink); }
+* { scrollbar-color: var(--line) transparent; caret-color: var(--amber); }
+:focus-visible { outline: 2px solid var(--amber) !important; outline-offset: 2px; }
+a, .control-box a { color: var(--amber); }
+a:hover, .control-box a:hover { color: #f6c566; }
+.content, .content p, .content li, .content td { color: var(--print); }
+h1, h2, h3, h4, .title, .content h1, .content h3, .content h4 {
+	font-family: var(--cond) !important; font-weight: 500 !important; color: var(--print) !important; letter-spacing: .01em; }
+.content h1, h1.title, .title { font-size: var(--t6) !important; line-height: 1.05 !important; }
+.content h3 { font-size: var(--t2) !important; letter-spacing: .16em !important; text-transform: uppercase; color: var(--faint) !important; font-weight: 600 !important; }
+.content h4 { font-size: var(--t4) !important; }
+hr { background: var(--line) !important; height: 1px !important; }
+.has-text-warning { color: var(--print) !important; }
+.has-text-success { color: var(--eye) !important; }
+.has-text-danger { color: var(--bad) !important; }
+.help, .is-size-7 { color: var(--faint) !important; }
+
+/* ---- navbar: the radio's front strip ------------------------------------------------- */
+.navbar { background: var(--ground) !important; border-bottom: 1px solid var(--line); box-shadow: none !important; min-height: 60px; }
+.navbar-brand { min-height: 60px; }
+.navbar-item { color: var(--faint) !important; background: transparent !important; padding: 0 12px !important; min-width: 48px; justify-content: center; }
+.navbar-item:hover { color: var(--print) !important; }
+.navbar-item.is-active { color: var(--amber) !important; box-shadow: inset 0 -3px 0 var(--amber); }
+.navbar-item > i { font-size: 24px !important; }
+.navbar-item > span { font: 500 var(--t2) var(--cond); letter-spacing: .08em; text-transform: uppercase; margin-left: 4px; }
+.navbar-burger { color: var(--dim) !important; height: 60px; width: 56px; }
+.navbar-burger:hover { background: transparent !important; color: var(--print) !important; }
+.navbar-menu { background: var(--cab) !important; box-shadow: none !important; border-bottom: 1px solid var(--line); }
+.navbar-menu .navbar-item { justify-content: flex-start; padding: 14px 18px !important; min-height: 52px; }
+
+/* ---- page frame: the cabinet ---------------------------------------------------------- */
+.container { margin-top: 64px !important; }
+.box, #container, .has-background-black-bis, .has-background-dark { background: var(--cab) !important; color: var(--print) !important;
+	box-shadow: none !important; border: 0 !important; border-radius: 18px !important; }
+#container { padding: 20px 18px 28px !important; }
+.box .box, #container .box { background: var(--cab-2) !important; border-radius: 14px !important; padding: 18px 16px !important; }
+
+/* ---- controls -------------------------------------------------------------------------- */
+.button { font: 600 var(--t2)/1 var(--cond) !important; letter-spacing: .1em; text-transform: uppercase; border-radius: 999px !important;
+	border: 1px solid var(--line) !important; background: transparent !important; color: var(--print) !important; min-height: 44px;
+	padding: 0 20px !important; box-shadow: none !important; }
+.button:hover { border-color: var(--dim) !important; }
+.button.is-warning, .button.is-primary, .button.is-success, .button.is-info, .button.is-link {
+	background: var(--amber) !important; border-color: var(--amber) !important; color: var(--amber-ink) !important; }
+.button.is-dark { background: var(--cab-2) !important; border-color: var(--cab-2) !important; }
+.button.is-small { min-height: 36px; font-size: var(--t1) !important; padding: 0 14px !important; }
+.button.is-danger { color: var(--bad) !important; border-color: rgba(239,106,82,.5) !important; background: transparent !important; }
+.input, .textarea, .select select, select, input[type=text], input[type=search], .ui-autocomplete-input {
+	background: var(--cab-2) !important; color: var(--print) !important; border: 1px solid transparent !important;
+	border-radius: 12px !important; box-shadow: none !important; min-height: 48px; font: 400 var(--t3) var(--sans) !important; }
+.input:focus, .textarea:focus, select:focus, input[type=text]:focus { border-color: var(--amber) !important; }
+.input::placeholder, input::placeholder { color: var(--faint) !important; }
+.field.has-addons .control:first-child .input { border-radius: 12px 0 0 12px !important; }
+.field.has-addons .control:last-child .button { border-radius: 0 12px 12px 0 !important; min-height: 48px; }
+.select:not(.is-multiple):not(.is-loading)::after { border-color: var(--amber) !important; }
+.checkbox, .label { color: var(--dim) !important; font-size: var(--t2); }
+input[type=checkbox] { accent-color: var(--amber); width: 18px; height: 18px; vertical-align: -3px; }
+
+/* sliders: an amber scale and the red needle as the thumb */
+input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 36px; }
+input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(242,181,68,.5), rgba(242,181,68,.2)); }
+input[type=range]::-moz-range-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(242,181,68,.5), rgba(242,181,68,.2)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 28px; margin-top: -11px; border-radius: 4px; background: var(--needle); border: 0; }
+input[type=range]::-moz-range-thumb { width: 8px; height: 28px; border-radius: 4px; background: var(--needle); border: 0; }
+
+/* rounded action buttons used by the popups */
+body rbutton { background: var(--amber) !important; background-image: none !important; color: var(--amber-ink) !important;
+	font: 600 var(--t3)/1 var(--cond) !important; letter-spacing: .1em; text-transform: uppercase; padding: 14px 30px !important;
+	transform: none !important; margin: 6px !important; min-height: 48px; }
+body rbutton + rbutton { background: transparent !important; color: var(--print) !important; box-shadow: inset 0 0 0 1px var(--line) !important; }
+
+/* popups (welcome, voice search, admin login) */
+.dark_overlay { background: #0c0806 !important; opacity: .82 !important; }
+.above_overlay { width: min(92%, 460px) !important; }
+.above_overlay .box { background: var(--cab) !important; border-radius: 20px !important; padding: 26px 22px 20px !important; }
+#welcomePanel h1 { font: 600 var(--t5)/1.15 var(--cond) !important; margin-bottom: .7em !important; }
+#welcomePanel ul { line-height: 1.55 !important; font-size: var(--t3); }
+#welcomePanel li::marker { color: var(--amber); }
+#welcomePanel label { font: 600 var(--t2) var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+#ASRselect { background: var(--cab) !important; border-radius: 20px; }
+
+/* notifications */
+.notification { background: var(--cab-2) !important; color: var(--print) !important; border-radius: 14px !important; }
+.notification .delete { background: var(--line) !important; }
+
+/* ---- Home: now playing + the dial ------------------------------------------------------- */
+#now-playing { font: 500 var(--t5)/1.12 var(--cond) !important; color: var(--print) !important; margin-bottom: 10px !important; }
+#now-playing p { margin-bottom: 4px !important; }
+#now-playing .singer { font: 600 var(--t3) var(--sans); }
+#playing_gif, #playing_png, #pytorch-logo { display: none !important; }
+#up-next { color: var(--print) !important; font-size: var(--t3); }
+.ohk-dial { margin: 12px 0 18px; }
+.ohk-glass { position: relative; height: 112px; border-radius: 12px; overflow-x: auto; overflow-y: hidden;
+	background: radial-gradient(130% 160% at 35% 125%, #6a4512 0%, #3d2711 42%, #1f150d 100%); scrollbar-width: none; }
+.ohk-glass::-webkit-scrollbar { display: none; }
+.ohk-track { position: relative; height: 100%; min-width: 100%; }
+.ohk-scale { position: absolute; left: 0; right: 0; top: 12px; height: 22px;
+	background: repeating-linear-gradient(90deg, rgba(241,227,196,.75) 0 2px, transparent 2px var(--min)),
+	            repeating-linear-gradient(90deg, rgba(241,227,196,.3) 0 1px, transparent 1px calc(var(--min) / 4));
+	background-size: 100% 22px, 100% 12px; background-repeat: no-repeat; }
+.ohk-lit { position: absolute; left: 0; top: 12px; height: 22px; background: linear-gradient(90deg, rgba(242,181,68,0), rgba(242,181,68,.3)); }
+.ohk-seg { position: absolute; bottom: 12px; height: 46px; padding: 0 8px; border-left: 2px solid currentColor; display: flex;
+	flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.ohk-seg::after { content: ""; position: absolute; left: 0; right: 3px; bottom: 0; height: 4px; border-radius: 0 3px 3px 0; background: currentColor; opacity: .55; }
+.ohk-seg b { font: 600 var(--t2)/1.1 var(--cond); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ohk-seg span { font: 400 var(--t1)/1.2 var(--sans); color: var(--print); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+.ohk-seg b, .ohk-seg span { text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.ohk-needle { position: absolute; top: 6px; bottom: 6px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle); transition: left .5s linear; }
+.ohk-hint { font: 500 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-top: 6px; }
+
+/* player control */
+#label-player-control { font-size: var(--t5) !important; }
+#s3-inner { background: var(--ground) !important; }
+.redButton { background: var(--amber) !important; }
+.legendText { color: var(--dim) !important; font: 600 var(--t2) var(--cond) !important; letter-spacing: .06em; text-transform: uppercase; }
+.control-box .is-size-3 a { color: var(--print); }
+.control-box .is-size-3 .icon { font-size: 34px; }
+#vol { color: var(--amber) !important; font-family: var(--cond); }
+.control-box h4 { font-size: var(--t3) !important; color: var(--dim) !important; }
+.tabs.hand { font-family: var(--cond) !important; }
+.step-btn { font-size: 28px; color: var(--dim) !important; line-height: 1; }
+.step-btn:hover { color: var(--amber) !important; }
+#seektrack-val, #seektrack-max { font: 500 var(--t2) var(--cond); color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* ---- lists: queue, browse ---------------------------------------------------------------- */
+.table { background: transparent !important; color: var(--print) !important; }
+.table td, .table th { border-color: var(--line) !important; color: var(--print) !important; padding: 12px 8px !important; vertical-align: middle !important; }
+.table.is-striped tbody tr:nth-child(even), tr:nth-child(even) { background: transparent !important; }
+.table tr:hover { background: var(--cab-2) !important; }
+.queue-user, .song-added-by { font: 600 var(--t2) var(--cond); letter-spacing: .06em; text-transform: uppercase; }
+.icon-list-add, .icon-plus-circled, .icon-edit-1, .icon-trash-empty { color: var(--amber); font-size: 20px; }
+.pagination-link, .pagination-previous, .pagination-next { background: var(--cab-2) !important; color: var(--print) !important; border: 0 !important; border-radius: 10px !important; }
+.pagination-link.is-current { background: var(--amber) !important; color: var(--amber-ink) !important; }
+.pagination-page-info, .pagination-page-info b { color: var(--faint) !important; }
+
+.drag-starter { background: var(--cab-2) !important; text-align: center; }
+.up-button, .down-button { color: var(--amber) !important; font-size: 18px; }
+#auto-refresh tr td:first-child { color: var(--faint); font-family: var(--cond); }
+
+/* search results / autocomplete menus */
+.ui-menu, .ui-autocomplete, .selectize-dropdown { background: var(--cab-2) !important; color: var(--print) !important; border: 0 !important; border-radius: 12px; }
+.ui-menu-item-wrapper.ui-state-active, .ui-state-active { background: var(--amber) !important; color: var(--amber-ink) !important; border: 0 !important; }
+select option { background: var(--cab-2); color: var(--print); }
+
+/* the lyrics panel (Home) */
+#lyrics-panel { background: var(--ground) !important; }
+#lyrics-head { background: var(--cab) !important; border-color: var(--line) !important; }
+#lyrics-title { color: var(--amber) !important; font-family: var(--cond) !important; font-size: var(--t4) !important; }
+.lyrics-line { font-family: var(--sans) !important; color: var(--print) !important; }
+#lyrics-body.is-synced .lyrics-line { color: var(--faint) !important; }
+#lyrics-body.is-synced .lyrics-line.is-past { color: #7a6650 !important; }
+#lyrics-body.is-synced .lyrics-line.is-active { color: var(--amber) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+	.ohk-needle { transition: none; }
+}

@@ -18,6 +18,8 @@
 	<link rel="stylesheet" href="/static/custom.css">
 	<link rel="icon" type="image/png" href="/static/images/microphone.png">
 	<link rel="stylesheet" href="/static/fontello/css/fontello.css">
+	<link rel="stylesheet" href="/static/ohk-radio.css">
+	<meta name="theme-color" content="#1d1410">
 </head>
 
 <style>
@@ -183,11 +185,11 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 				<span>{{getString1(98)}}</span>
 			</a>
 			<a id="speak" class="navbar-item" style="margin-left: auto;" onclick="ASR()">
-				<i class="icon" title="{{getString1(212)}}">🗣</i>
+				<i class="icon icon-mic-1" title="{{getString1(212)}}"></i>
 				<span>{{getString1(212)}}</span>
 			</a>
 			<a id="help" class="navbar-item" href="#">
-				<i class="icon" title="Info" style="font-weight: bold;">?</i>
+				<i class="icon icon-info-circled" title="Info"></i>
 				<span>Info</span>
 			</a>
 			<a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
@@ -222,6 +224,13 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 		<div class="box" id="container" style="margin-top: 5px;"></div>
 	</div>
 <script>
+// one fixed colour per singer, the same palette as the admin panel's dial
+const SINGER_COLORS = ['#9fd0f0', '#e9a6c9', '#b9d98a', '#f0a77a', '#c6b3f5', '#8fd6c8', '#f5d77a', '#f28b82'];
+function singerColor(name) {
+	let x = 0;
+	for (const c of String(name || '?')) x = (x * 31 + c.codePointAt(0)) >>> 0;
+	return SINGER_COLORS[x % SINGER_COLORS.length];
+}
 const updateFreq = 5;
 var spectrum, dBASpectrum, recorder, audios, recorder_timeout, use_recorded;
 var timer, currentUser, ws, siriWave, g_stream, g_devices, taskHandle, source;
