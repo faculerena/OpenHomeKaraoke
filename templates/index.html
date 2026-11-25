@@ -102,7 +102,7 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 			<button type="button" class="asr-btn asr-cancel" title="Cancel" onclick="recorder.stop();"><i class="icon icon-cancel-circled-1"></i>{{getString1(230)}}</button>
 		</div>
 	</div>
-	<div id="ASRselect" class="above_overlay" style="font-size: x-large; line-height: 2; overflow: auto; height: fit-content; padding: 5%;">
+	<div id="ASRselect" class="above_overlay" style="overflow: auto; height: fit-content; padding: 22px 20px;">
 		<b>{{getString1(228)}}</b>
 		<div id="ASRlist"></div>
 		<div style="justify-content: space-around; display: flex; margin-top:0.5em;">
@@ -546,7 +546,7 @@ function addSongs(json){
 	catch(err){ console.log(err) }
 	ASRlist.innerHTML = "";
 	for(var i=0; i<titles.length; i++)
-		ASRlist.innerHTML += `<p><input type="checkbox" id="add_optn_${i}" style="cursor:pointer; transform:scale(1.5)" value=${i}>&nbsp;&nbsp;<label for="add_optn_${i}" onclick="add1songById(${i})" style="cursor:pointer">${titles[i]}</label></p>`;
+		ASRlist.innerHTML += `<p class="asr-row"><input type="checkbox" id="add_optn_${i}" value=${i}><label for="add_optn_${i}" onclick="add1songById(${i})">${titles[i]}</label></p>`;
 	$("#ASR").show();
 	$("#ASRselect").show();
 }
