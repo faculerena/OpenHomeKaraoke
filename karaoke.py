@@ -340,6 +340,19 @@ class Karaoke:
 		on it as stations; and how to join (QR + URL). Static on purpose: the TV stream stays cheap."""
 		if self.hide_splash_screen:
 			return
+		# the run loop calls this on every pass: redraw only when something on it changed
+		playing = (not self.has_video) and self.now_playing
+		key = (self.screen.get_size(), playing and (self.now_playing, self.now_playing_user),
+				tuple((q.get('title'), q.get('user')) for q in self.queue), self.firstSongStarted,
+				len(self.available_songs), self.url, getattr(self, 'tv_url', None), self.hide_ip,
+				self.streamer_alive() if not self.hide_ip else None, self.party_title())
+		if key == getattr(self, '_splash_key', None) and self.is_network_connected():
+			self.screen.blit(self._splash_frame, (0, 0))
+			return
+		self.draw_splash_screen()
+		self._splash_key, self._splash_frame = key, self.screen.copy()
+
+	def draw_splash_screen(self):
 		logging.debug("Rendering splash screen")
 		W, H = self.screen.get_size()
 		r = W / self.ref_W
@@ -471,12 +484,16 @@ class Karaoke:
 		import unicodedata
 		try:
 			from panel import config as ohk_config
+			mtime = os.path.getmtime(ohk_config.CONFIG_PATH) if os.path.exists(ohk_config.CONFIG_PATH) else None
+			if getattr(self, '_party_mtime', 0) == mtime:
+				return self._party_title
 			cfg = ohk_config.load()
 			t = cfg['welcome_title'] if cfg.get('welcome_enabled') else ''
 		except Exception:
-			t = ''
+			mtime, t = None, ''
 		t = ''.join(ch for ch in (t or '') if unicodedata.category(ch) not in ('So', 'Cf', 'Mn', 'Cs') and ch != '️')
-		return ' '.join(t.split()) or getString(136)
+		self._party_mtime, self._party_title = mtime, ' '.join(t.split()) or getString(136)
+		return self._party_title
 
 	def singer_color(self, name):
 		"""The singer's colour, the same hash as singerColor() on the phones."""
