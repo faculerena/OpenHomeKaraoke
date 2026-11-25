@@ -97,8 +97,101 @@ function update(data){
 
 	if("volume" in obj && !volume_changing)
 		$("#vol").text(obj.volume);
+
+	lyricsOnStatus();
 }
 function getNowPlaying() { $.get('/nowplaying').done(update); }
+
+/* ---- Lyrics panel -------------------------------------------------------
+   Shows the plain lyrics of the current song, read server-side off whatever
+   subtitle it ships with (/lyrics). When those lines carry timestamps we can
+   also follow along, so a Sync switch appears and highlights the current line. */
+if (typeof lyrTimer !== 'undefined' && lyrTimer) clearInterval(lyrTimer);
+var lyrData = null, lyrFor = '', lyrOpen = false, lyrTimer = null;
+var lyrActive = -1, lyrBase = 0, lyrBaseAt = 0, lyrLastSeek = null, lyrHeldUntil = 0;
+
+function lyrEsc(s) { return $('<div>').text(s).html().replace(/\n/g, '<br>'); }
+
+function lyricsSynced() { return $("#lyrics-sync").is(":checked"); }
+
+/* Playback position in seconds. The websocket pushes the seek value about once a
+   second, so interpolate between pushes to keep the highlight from stepping. */
+function lyricsNow() {
+	var v = parseFloat($("#seektrack").val());
+	if (isNaN(v)) return null;
+	if (v !== lyrLastSeek) { lyrLastSeek = v; lyrBase = v; lyrBaseAt = Date.now(); }
+	var t = obj.is_paused ? lyrBase : lyrBase + Math.min((Date.now() - lyrBaseAt) / 1000, 2);
+	return t - (obj.subtitle_delay || 0);   // stay in step with the subtitles on the TV
+}
+
+function lyricsRender() {
+	var body = $("#lyrics-body");
+	if (!lyrData || !lyrData.available) {
+		body.html('<p class="lyrics-empty">{{getString1(240)}}</p>');
+		$("#lyrics-sync-wrap").removeClass('is-shown');
+		return;
+	}
+	$("#lyrics-sync-wrap").toggleClass('is-shown', !!lyrData.synced);
+	body.html(lyrData.lines.map((L, i) =>
+		`<div class="lyrics-line" id="lyrline-${i}">${lyrEsc(L.s)}</div>`).join(''));
+	lyrActive = -1;
+	lyricsApplyMode();
+}
+
+/* Plain mode is the default: every line equally readable, nothing moving. */
+function lyricsApplyMode() {
+	var on = lyricsSynced() && lyrData && lyrData.synced;
+	$("#lyrics-body").toggleClass('is-synced', !!on);
+	if (!on) $(".lyrics-line").removeClass('is-active is-past');
+	else lyricsTick(true);
+}
+
+function lyricsTick(force) {
+	if (!lyrOpen || !lyrData || !lyrData.available || !lyricsSynced() || !lyrData.synced) return;
+	var t = lyricsNow();
+	if (t === null) return;
+	var lines = lyrData.lines, idx = -1;
+	for (var i = 0; i < lines.length && lines[i].t <= t + 0.001; i++) idx = i;
+	if (idx === lyrActive && !force) return;
+	lyrActive = idx;
+	$(".lyrics-line").each(function (i) {
+		$(this).toggleClass('is-active', i === idx).toggleClass('is-past', i < idx);
+	});
+	if (idx < 0 || Date.now() < lyrHeldUntil) return;      // don't fight a manual scroll
+	var el = document.getElementById('lyrline-' + idx), box = $("#lyrics-body")[0];
+	if (el) box.scrollTo({ top: el.offsetTop - box.clientHeight / 2 + el.offsetHeight / 2, behavior: 'smooth' });
+}
+
+function lyricsLoad(force) {
+	if (!obj.now_playing) { lyrData = null; lyrFor = ''; lyricsRender(); return; }
+	if (!force && lyrFor === obj.now_playing) return;
+	lyrFor = obj.now_playing;
+	$.get('/lyrics', (data) => {
+		try { lyrData = JSON.parse(data); } catch { lyrData = null; }
+		$("#lyrics-title").text(obj.now_playing || '');
+		lyricsRender();
+	});
+}
+
+/* Called on every status update: keep the panel pointed at the song that is playing. */
+function lyricsOnStatus() {
+	if (lyrOpen && lyrFor !== (obj.now_playing || '')) lyricsLoad(false);
+}
+
+function lyricsShow() {
+	lyrOpen = true;
+	$("#lyrics-title").text(obj.now_playing || '');
+	$("#lyrics-panel").addClass('is-open');
+	lyricsLoad(true);
+	clearInterval(lyrTimer);
+	lyrTimer = setInterval(lyricsTick, 250);
+}
+
+function lyricsHide() {
+	lyrOpen = false;
+	clearInterval(lyrTimer); lyrTimer = null;
+	$("#lyrics-panel").removeClass('is-open');
+}
 
 function checkUser() {
 	try{ return obj.now_playing_user=='Random' || $('#current-user').text().trim()==obj.now_playing_user; }
@@ -238,6 +331,15 @@ $("#subdelay-val").blur(() => {
 });
 
 $("#subtitle-sel").click(() => {$.get("/toggle_subtitle");});
+$("#lyrics-open").click(lyricsShow);
+$("#lyrics-close").click(lyricsHide);
+$("#lyrics-sync").prop('checked', Cookies.get('lyrics_sync') === '1').change(function () {
+	Cookies.set('lyrics_sync', this.checked ? '1' : '0', { expires: 3650 });
+	lyrHeldUntil = 0;
+	lyricsApplyMode();
+});
+// A manual scroll wins for a few seconds before the highlight takes the view back.
+$("#lyrics-body").on('touchmove wheel', () => { lyrHeldUntil = Date.now() + 4000; });
 $("#delay-inc").click(() => {$.get("/audio_delay/+", function(data){$("#delay-val").text(parseFloat(data).toFixed(2))});});
 $("#delay-dec").click(() => {$.get("/audio_delay/-", function(data){$("#delay-val").text(parseFloat(data).toFixed(2))});});
 $("#subdelay-inc").click(() => {$.get("/subtitle_delay/+", function(data){$("#subdelay-val").text(parseFloat(data).toFixed(1))});});
@@ -269,6 +371,46 @@ body {
 .redButton.horizTranslate3 { -webkit-transition: -webkit-transform 0.1s linear; -webkit-transform: translateX(120px);}
 .legendText{display:inline-block; width:50px; padding-bottom:33px; cursor:default; user-select: none;}
 .boxedText { padding: 2px; border: 1px solid white; font-size:1.6rem; }
+#lyrics-panel {
+	display: none;
+	position: fixed; inset: 0; z-index: 300;
+	background: #12161a;
+	flex-direction: column;
+}
+#lyrics-panel.is-open { display: flex; }
+#lyrics-head {
+	display: flex; align-items: center; justify-content: space-between; gap: 12px;
+	padding: 12px 14px; border-bottom: 1px solid #2b3238; background: #171c22; flex: none;
+}
+#lyrics-title {
+	font-size: 1rem; font-weight: 600; color: #ffdd57;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#lyrics-sync-wrap {
+	display: none; align-items: center; gap: 6px; margin-right: 14px;
+	font-size: .9rem; color: #b6c2cc; cursor: pointer; user-select: none;
+}
+#lyrics-sync-wrap.is-shown { display: flex; }
+#lyrics-sync { transform: scale(1.3); cursor: pointer; accent-color: #3EB2FD; }
+#lyrics-close { font-size: 1.5rem; line-height: 1; color: #b6c2cc; cursor: pointer; padding: 0 4px; }
+#lyrics-body {
+	flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+	padding: 18px 20px calc(50vh) 20px; text-align: center;
+}
+.lyrics-line {
+	font-size: 1.35rem; line-height: 1.45; padding: 9px 0; color: #e6ecf1;
+	overflow-wrap: break-word; transition: color .2s, opacity .2s;
+}
+/* Only the follow-along view dims anything; plain lyrics stay uniformly readable. */
+#lyrics-body.is-synced .lyrics-line { color: #7d8b96; }
+#lyrics-body.is-synced .lyrics-line.is-past { color: #5d6870; }
+#lyrics-body.is-synced .lyrics-line.is-active {
+	color: #ffffff; font-weight: 700; transform: scale(1.02);
+}
+.lyrics-empty { color: #8b98a3; text-align: center; padding-top: 28px; }
+@media screen and (min-width: 700px) {
+	.lyrics-line { font-size: 1.5rem; }
+}
 .truncate {
    overflow-x: hidden;
    overflow-y: scroll;
@@ -288,6 +430,24 @@ body {
 
 <div class="content">
 <p class="is-size-4 has-text-warning" id="now-playing"></p>
+<p class="control-box" style="margin-top:6px">
+	<a id="lyrics-open" class="button is-small is-dark"><i class="icon icon-th-list"></i>&nbsp;{{getString1(238)}}</a>
+</p>
+
+<div id="lyrics-panel">
+	<div id="lyrics-head">
+		<div style="min-width:0">
+			<div id="lyrics-title"></div>
+		</div>
+		<div class="is-flex" style="align-items:center; flex:none">
+			<label id="lyrics-sync-wrap" title="{{getString1(239)}}">
+				<input type="checkbox" id="lyrics-sync"><span>{{getString1(239)}}</span>
+			</label>
+			<a id="lyrics-close" title="{{getString1(230)}}">&#x2715;</a>
+		</div>
+	</div>
+	<div id="lyrics-body"></div>
+</div>
 
 <hr/>
 <h3>{{getString1(75)}}</h3>

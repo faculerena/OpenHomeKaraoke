@@ -17,6 +17,7 @@ from constants import VERSION
 from collections import defaultdict
 from lib.get_platform import *
 from lib.vlcclient import get_default_vlc_path
+from lib.lyrics import get_lyrics
 
 try:
 	from urllib.parse import quote, unquote
@@ -442,6 +443,15 @@ def subtitle_delay(delay_val):
 def toggle_subtitle():
 	K.toggle_subtitle()
 	return ''
+
+
+@app.route("/lyrics")
+def lyrics():
+	# Plain lyrics of the current song, read off its subtitle file, for the mobile
+	# Lyrics panel. Includes the title so the client can tell when to reload.
+	rc = get_lyrics(K.now_playing_filename, tmp_dir = K.tmp_dir)
+	rc['now_playing'] = K.now_playing
+	return json.dumps(rc)
 
 
 @app.route("/restart")
