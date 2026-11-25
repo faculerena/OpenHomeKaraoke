@@ -28,7 +28,20 @@ if get_platform() != "windows":
 STD_VOL = 65536/8/np.sqrt(2)
 ip2websock, ip2pane = {}, {}
 
-ws_send = lambda ip, msg: ip2websock[ip].send(msg) if ip in ip2websock else None
+# ip2websock: client IP -> SET of its open websockets (a phone can hold several: a reconnect, a
+# second tab). See ws_init in app.py.
+ip2ws_lock = threading.Lock()
+
+def ws_send(ip, msg):
+	"""Send to every open socket of one client; drop the ones that fail."""
+	with ip2ws_lock:
+		socks = list(ip2websock.get(ip, ()))
+	for ws in socks:
+		try:
+			ws.send(msg)
+		except Exception:
+			with ip2ws_lock:
+				ip2websock.get(ip, set()).discard(ws)
 
 def flash(message: str, category: str = "message", client_ip = ''):
 	ws_send(client_ip or request.remote_addr, f'showNotification("{message}", "{category}")')

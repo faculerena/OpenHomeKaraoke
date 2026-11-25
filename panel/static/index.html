@@ -121,7 +121,9 @@ main[hidden] { display: none; }
 .seg b { font: 600 var(--t2)/1.15 var(--cond); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .seg span { font: 400 var(--t1)/1.2 var(--sans); color: var(--print); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; opacity: .85; }
 .seg.past { opacity: .5; }
-.needle { position: absolute; top: 8px; bottom: 8px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle);
+.seg { z-index: 2; }
+.seg.tiny b, .seg.tiny span { display: none; }
+.needle { position: absolute; z-index: 1; top: 8px; bottom: 8px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle);
 	transition: left .5s linear; }
 .glass-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 0 24px;
 	font: 500 var(--t3) var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
@@ -151,8 +153,8 @@ main[hidden] { display: none; }
 .q .who { font: 600 var(--t2) var(--cond); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; }
 .q.more { color: var(--faint); font-size: var(--t2); }
 .empty { color: var(--faint); font-size: var(--t2); margin: 10px 0; }
-.codes { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 14px; }
-.code { background: var(--cab); border-radius: 14px; padding: 14px 12px 12px; text-align: center; }
+.codes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.code { text-align: center; min-width: 0; }
 .code .qr { background: var(--print); border-radius: 8px; padding: 8px; width: 100%; max-width: 132px; margin: 0 auto 10px; }
 .code .qr img { display: block; width: 100%; mix-blend-mode: multiply; }
 .code b { display: block; font: 600 var(--t2)/1.2 var(--cond); letter-spacing: .08em; text-transform: uppercase; }
@@ -168,10 +170,8 @@ main[hidden] { display: none; }
 .sheet-h .link, .sheet-h .btn { margin-left: auto; }
 .sheet-p { color: var(--dim); font-size: var(--t2); margin: 0 0 18px; max-width: 68ch; }
 .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px 56px; }
-.stats { display: flex; gap: 28px; flex-wrap: wrap; margin: 4px 0 18px; }
-.stat b { display: block; font: 500 var(--t6)/1 var(--cond); }
-.stat small { font: 500 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
-.stat.warn b { color: var(--warn); }
+.summary { font: 500 var(--t4)/1.4 var(--cond); letter-spacing: .02em; color: var(--dim); margin: 2px 0 18px; }
+.summary .need { color: var(--warn); font-weight: 600; }
 .jobs { display: grid; gap: 10px; }
 .job { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .jobstate { font: 600 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
@@ -517,7 +517,7 @@ function buildDial(items, now, on) {
 	}
 	for (const i of items) {
 		const w = Math.max(24, x(i.end) - x(i.start) - 4);
-		kids.push(h('div', {class: 'seg ' + i.kind, style: `left:${x(i.start)}px;width:${w}px;color:${singerColor(i.user)}`,
+		kids.push(h('div', {class: 'seg ' + i.kind + (w < 70 ? ' tiny' : ''), style: `left:${x(i.start)}px;width:${w}px;color:${singerColor(i.user)}`,
 			title: `${i.user || '?'}: ${i.title} · ${fmtHM(i.start)}`},
 			h('span', {}, i.title), h('b', {}, i.user || '?')));
 	}
@@ -667,10 +667,12 @@ function alertIn(box, text) { const m = h('div', {class: 'msg show err'}, text);
 async function loadLibrary() {
 	const L = await api('/api/library'), box = $('#library');
 	if (L.error) { box.replaceChildren(h('p', {class: 'empty'}, L.error)); return; }
-	const stat = (n, label, warn) => h('div', {class: 'stat' + (warn && n ? ' warn' : '')}, h('b', {}, n), h('small', {}, label));
-	const kids = [h('div', {class: 'stats'},
-		stat(L.songs, 'songs in the app'), stat(L.missing_stems.length, 'no vocal stems', 1),
-		stat(L.missing_colorwipe.length, 'no color-wipe', 1), stat(L.cleanable.length, `leftovers · ${L.size_mb} MB`, 1))];
+	// one line of dial print; a count is emphasised only when it needs doing something about
+	const part = (n, text, okText) => n ? h('b', {class: 'need'}, `${n} ${text}`) : h('span', {}, okText);
+	const kids = [h('p', {class: 'summary'}, `${L.songs} songs`, ' · ',
+		part(L.missing_stems.length, 'without vocal stems', 'all have vocal stems'), ' · ',
+		part(L.missing_colorwipe.length, 'without a color-wipe', 'all have a color-wipe'), ' · ',
+		part(L.cleanable.length, `leftover files (${L.size_mb} MB)`, 'no leftovers'))];
 	kids.push(h('div', {class: 'jobs'}, h('div', {class: 'job'}, jobButton('presplit', 'Pre-split vocals')),
 		h('div', {class: 'job'}, jobButton('gen-missing', 'Generate missing color-wipes'))));
 	if (L.cleanable.length) {

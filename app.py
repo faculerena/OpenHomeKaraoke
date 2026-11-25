@@ -15,6 +15,7 @@ from flask_paginate import Pagination, get_page_parameter
 from karaoke import *
 from constants import VERSION
 from collections import defaultdict
+from types import SimpleNamespace
 from lib.get_platform import *
 from lib.vlcclient import get_default_vlc_path
 from lib.lyrics import get_lyrics
@@ -36,11 +37,17 @@ getString1 = lambda lang, ii: os.langs[lang].get(ii, os.langs['en_US'][ii])
 getString2 = lambda ii: getString1(request.client_lang, ii)
 
 
-# Websocket handler
+# Websocket handler.
+# ip2websock maps a client IP to the SET of its open sockets. One phone can hold several at once
+# (a reconnect, a second tab): keying a single socket by IP meant the old socket's cleanup removed
+# the new, still-live one, and that phone silently stopped getting updates (its page froze).
+# ip2ws_lock and ws_send() live in karaoke.py, next to the map itself.
+
 @sock.route('/ws_init')
 def ws_init(sock):
 	key = sock.sock.getpeername()[0]
-	ip2websock[key] = sock
+	with ip2ws_lock:
+		ip2websock.setdefault(key, set()).add(sock)
 	while sock.connected:
 		try:
 			cmd = sock.receive()
@@ -49,7 +56,12 @@ def ws_init(sock):
 			if not sock.connected:      # client just disconnected — normal, not an error
 				break
 			traceback.print_exc()
-	ip2websock.pop(key, None)
+	with ip2ws_lock:                    # forget only THIS socket: the client may have another open
+		socks = ip2websock.get(key)
+		if socks is not None:
+			socks.discard(sock)
+			if not socks:
+				ip2websock.pop(key, None)
 
 def wscmd(client_ip, cmd):
 	if cmd.startswith('pop_from_queue '):
@@ -81,16 +93,16 @@ def status_thread():
 			tm = K.get_state().get('time', None)
 			if tm is None:
 				continue
-			for ip, ws in ip2websock.items():
+			for ip in list(ip2websock):
 				if ip2pane.get(ip, '') == 'home':
-					ws.send(f"seektrack.value={tm};$('#seektrack-val').text(getHHMMSS({tm}));")
+					ws_send(ip, f"seektrack.value={tm};$('#seektrack-val').text(getHHMMSS({tm}));")
 			continue
 
-		for ip, ws in ip2websock.items():
+		for ip in list(ip2websock):
 			if ip2pane.get(ip, '') == 'home':
-				ws.send(f"update('{status_full}')")
+				ws_send(ip, f"update('{status_full}')")
 			elif ip2pane.get(ip, '') == 'queue':
-				ws.send(f"update('{K.queue_json}')")
+				ws_send(ip, f"update('{K.queue_json}')")
 		K.status_dirty = False
 
 # Define global symbols for Jinja templates 
@@ -943,7 +955,7 @@ def _add_spoken(client_ip, user, getString):
 		return logging.error(f'ASR output is empty')
 
 	res = findMedia(K.download_path, asr_postprocess(asr_output['text']), lang=asr_output['language'])
-	ws = ip2websock.get(client_ip, '')
+	ws = SimpleNamespace(send = lambda msg: ws_send(client_ip, msg))
 	if not res:
 		return ws.send(f"showNotification('{getString(226)%asr_output['text']}', 'is-info')")
 	res_titles = [filename_from_path(s) for s in res]

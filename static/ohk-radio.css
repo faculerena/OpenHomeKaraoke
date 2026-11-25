@@ -48,12 +48,15 @@ hr { background: var(--line) !important; height: 1px !important; }
 .navbar-menu { background: var(--cab) !important; box-shadow: none !important; border-bottom: 1px solid var(--line); padding: 6px 10px 10px !important; }
 .navbar-menu .navbar-item { justify-content: flex-start; padding: 14px 18px !important; min-height: 52px; }
 
-/* ---- page frame: the cabinet ---------------------------------------------------------- */
-.container { margin-top: 64px !important; }
-.box, #container, .has-background-black-bis, .has-background-dark { background: var(--cab) !important; color: var(--print) !important;
+/* ---- page frame: one band, sections ruled inside it (no cards in cards) ----------------- */
+.container { margin-top: 60px !important; padding: 0 !important; }
+.box, .has-background-black-bis, .has-background-dark { background: var(--cab) !important; color: var(--print) !important;
 	box-shadow: none !important; border: 0 !important; border-radius: 18px !important; }
-#container { padding: 20px 18px 28px !important; }
-.box .box, #container .box { background: var(--cab-2) !important; border-radius: 14px !important; padding: 18px 16px !important; }
+#container { background: var(--ground) !important; border-radius: 0 !important; margin: 0 !important; box-shadow: none !important;
+	padding: 22px 18px 110px !important; }       /* bottom gutter: the walking gnomes live there */
+#container .box, #container .has-background-black-bis { background: transparent !important; border-radius: 0 !important;
+	border-top: 1px solid var(--line) !important; padding: 18px 0 0 !important; margin-top: 8px; }
+#alpha-bar.has-background-dark { background: var(--cab) !important; border-radius: 12px !important; }
 
 /* ---- controls -------------------------------------------------------------------------- */
 .button { font: 600 var(--t2)/1 var(--cond) !important; letter-spacing: .1em; text-transform: uppercase; border-radius: 999px !important;
@@ -70,11 +73,15 @@ hr { background: var(--line) !important; height: 1px !important; }
 	border-radius: 12px !important; box-shadow: none !important; min-height: 48px; font: 400 var(--t3) var(--sans) !important; }
 .input:focus, .textarea:focus, select:focus, input[type=text]:focus { border-color: var(--amber) !important; }
 .input::placeholder, input::placeholder { color: var(--faint) !important; }
-.field.has-addons .control:first-child .input { border-radius: 12px 0 0 12px !important; }
-.field.has-addons .control:last-child .button { border-radius: 0 12px 12px 0 !important; min-height: 48px; }
+.field.has-addons .control:first-child .input, .field.has-addons .control:first-child input { border-radius: 12px 0 0 12px !important; }
+.field.has-addons .control:last-child .button, .field.has-addons .button:last-child { border-radius: 0 12px 12px 0 !important; min-height: 48px; margin-left: 0 !important; }
 .select:not(.is-multiple):not(.is-loading)::after { border-color: var(--amber) !important; }
 .checkbox, .label { color: var(--dim) !important; font-size: var(--t2); }
-input[type=checkbox] { accent-color: var(--amber); width: 18px; height: 18px; vertical-align: -3px; }
+input[type=checkbox] { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; vertical-align: -4px; margin-right: 4px;
+	border-radius: 6px; background: var(--cab-2); border: 1px solid var(--line); display: inline-grid; place-content: center; cursor: pointer; }
+input[type=checkbox]:checked { background: var(--amber); border-color: var(--amber); }
+input[type=checkbox]:checked::after { content: ""; width: 9px; height: 5px; border: 2px solid var(--amber-ink); border-top: 0; border-right: 0;
+	transform: rotate(-45deg) translate(1px, -1px); }
 
 /* sliders: an amber scale and the red needle as the thumb */
 input[type=range] { -webkit-appearance: none; appearance: none; background: transparent; height: 36px; }
@@ -97,14 +104,24 @@ body rbutton + rbutton { background: transparent !important; color: var(--print)
 #welcomePanel ul { line-height: 1.55 !important; font-size: var(--t3); }
 #welcomePanel li::marker { color: var(--amber); }
 #welcomePanel label { font: 600 var(--t2) var(--cond); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-#ASRselect { background: var(--cab) !important; border-radius: 20px; }
+#ASRselect { background: var(--cab) !important; border-radius: 20px; color: var(--print); }
+#ASRpanel { height: auto !important; background: var(--cab); border-radius: 20px; padding: 22px 20px; }
+.asr-title { font: 600 var(--t5)/1.2 var(--cond) !important; color: var(--print) !important; margin: 0 0 14px !important; text-align: center; }
+.asr-wave { width: 100%; height: 160px; border-radius: 14px; background: var(--ground); border: 1px solid var(--line); }
+.asr-actions { display: flex; gap: 12px; justify-content: center; margin-top: 18px; }
+.asr-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 28px; border-radius: 999px; cursor: pointer;
+	font: 600 var(--t3)/1 var(--cond); letter-spacing: .1em; text-transform: uppercase; }
+.asr-ok { background: var(--amber); color: var(--amber-ink); border: 0; }
+.asr-cancel { background: transparent; color: var(--print); border: 1px solid var(--line); }
 
 /* notifications */
 .notification { background: var(--cab-2) !important; color: var(--print) !important; border-radius: 14px !important; }
 .notification .delete { background: var(--line) !important; }
 
 /* ---- Home: now playing + the dial ------------------------------------------------------- */
-#now-playing { font: 500 var(--t5)/1.12 var(--cond) !important; color: var(--print) !important; margin-bottom: 10px !important; }
+#container:has(#now-playing) > header.title h1 { font-size: var(--t2) !important; letter-spacing: .16em !important; text-transform: uppercase;
+	color: var(--faint) !important; font-weight: 600 !important; margin-bottom: 10px !important; }
+#now-playing { font: 500 var(--t6)/1.08 var(--cond) !important; color: var(--print) !important; margin-bottom: 10px !important; }
 #now-playing p { margin-bottom: 4px !important; }
 #now-playing .singer { font: 600 var(--t3) var(--sans); }
 #playing_gif, #playing_png, #pytorch-logo { display: none !important; }
@@ -125,7 +142,8 @@ body rbutton + rbutton { background: transparent !important; color: var(--print)
 .ohk-seg b { font: 600 var(--t2)/1.1 var(--cond); letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ohk-seg span { font: 400 var(--t1)/1.2 var(--sans); color: var(--print); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
 .ohk-seg b, .ohk-seg span { text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-.ohk-needle { position: absolute; top: 6px; bottom: 6px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle); transition: left .5s linear; }
+.ohk-seg { z-index: 2; }
+.ohk-needle { position: absolute; z-index: 1; top: 6px; bottom: 6px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle); transition: left .5s linear; }
 .ohk-hint { font: 500 var(--t1) var(--cond); letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-top: 6px; }
 
 /* player control */
@@ -143,6 +161,7 @@ body rbutton + rbutton { background: transparent !important; color: var(--print)
 #seektrack-val, #seektrack-max { font: 500 var(--t2) var(--cond); color: var(--dim); font-variant-numeric: tabular-nums; }
 
 /* ---- lists: queue, browse ---------------------------------------------------------------- */
+table td, table th, .content table td, .content table th { border-color: var(--line) !important; }
 .table { background: transparent !important; color: var(--print) !important; }
 .table td, .table th { border-color: var(--line) !important; color: var(--print) !important; padding: 12px 8px !important; vertical-align: middle !important; }
 .table.is-striped tbody tr:nth-child(even), tr:nth-child(even) { background: transparent !important; }
