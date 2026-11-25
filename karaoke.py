@@ -230,7 +230,8 @@ class Karaoke:
 		else:
 			try:
 				import pip
-				pip.main(['install', 'yt-dlp', '-U'])
+				# [default] keeps yt-dlp-ejs (the JS challenge solver) at the version this yt-dlp expects
+				pip.main(['install', 'yt-dlp[default]', '-U'])
 				cleanse_modules('yt_dlp')
 				import yt_dlp
 			except:

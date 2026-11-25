@@ -90,6 +90,9 @@ Three things that will bite you otherwise:
   `torchaudio`, `pytorch-triton-rocm`). On NVIDIA or CPU-only machines, replace those three
   lines and the `--extra-index-url` header with the build for your platform from
   https://pytorch.org/ — otherwise everything installs but the GPU is never used.
+- **YouTube downloads need `deno`** (`sudo pacman -S deno`). YouTube now gates its video
+  formats behind a JavaScript challenge; `yt-dlp[default]` ships the solver (`yt-dlp-ejs`)
+  and runs it with deno. Without deno, only low-quality formats resolve, if any.
 - **`setuptools` is held below 81 on purpose.** 81 removed `pkg_resources`, which
   `librosa==0.10.0` imports lazily; without the pin the vocal splitter dies mid-run.
 
@@ -318,7 +321,7 @@ Make sure youtube-dl is up to date, old versions have higher failure rates due t
 You can update youtube-dl directly from the web UI. Go to `Info > Update Youtube-dl` (depending on how you installed, you may need to be running OpenHomeKaraoke as sudo for this to work)
 
 Or, from the CLI (path may vary):
-`yt-dlp -U` or `pip install yt-dlp -U`
+`yt-dlp -U` or `pip install -U "yt-dlp[default]"` (the `[default]` extra keeps the JS challenge solver in step; it also needs `deno` installed)
 
 ### I brought my OpenHomeKaraoke to a friend's house and it can't connect to their network. How do I change wifi connection without ssh?
 

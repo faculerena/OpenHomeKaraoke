@@ -66,11 +66,13 @@ h11==0.16.0
 flask-paginate==2021.10.29
 
 # --- download / network ---
-yt-dlp==2026.6.9
+# [default] pulls yt-dlp-ejs: YouTube's JS challenge solver, run locally by deno
+# (system package). Without it only low-quality formats resolve.
+yt-dlp[default]==2026.11.23
 ytmusicapi==1.12.1
 requests==2.34.2
 urllib3==2.7.0
-certifi==2026.6.17
+certifi==2026.11.20
 idna==3.18
 charset-normalizer==3.4.7
 
