@@ -53,9 +53,9 @@ Presione ESC para salir de OpenHomeKaraoke
 ¡Se detectó el modo de configuración de RaspiWifiConfig!
 Conecte otro dispositivo/teléfono inteligente al AP Wifi: '%s'
 Luego apunte su navegador a: '%s://%s%s' y siga las instrucciones.
-Hasta la próxima:
+A continuación: 
 Añadido por:
-Jugando ahora:
+Sonando ahora: 
 ¡Modo administrador concedido!
 Aumentar el retraso del audio te dará más tiempo para leer la letra antes de cantar la siguiente frase.
 Reducir el retraso de los subtítulos te dará más tiempo para leer la letra antes de cantar la siguiente frase.
