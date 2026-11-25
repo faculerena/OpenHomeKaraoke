@@ -1,0 +1,746 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-25T03:53:05+00:00",
+  "title": "Design System: OpenHomeKaraoke",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Walnut Ground",
+        "canonical": "#1d1410",
+        "tonalRamp": [
+          "#110906",
+          "#2c231e",
+          "#4a3f3b",
+          "#6a5e59",
+          "#8c7f7a",
+          "#afa29c",
+          "#d3c6c0",
+          "#f9ebe5"
+        ]
+      },
+      "cab": {
+        "role": "neutral",
+        "displayName": "Cabinet",
+        "canonical": "#261a13",
+        "tonalRamp": [
+          "#130804",
+          "#2e221b",
+          "#4c3f37",
+          "#6c5e55",
+          "#8e7f76",
+          "#b2a198",
+          "#d6c5bc",
+          "#fcebe1"
+        ]
+      },
+      "cab-2": {
+        "role": "neutral",
+        "displayName": "Cabinet Inset",
+        "canonical": "#31211a",
+        "tonalRamp": [
+          "#150703",
+          "#31211a",
+          "#4f3d36",
+          "#6f5d54",
+          "#917d75",
+          "#b5a097",
+          "#dac4bb",
+          "#feeae1"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#4a3326",
+        "tonalRamp": [
+          "#180600",
+          "#351f13",
+          "#543c2f",
+          "#745b4d",
+          "#977c6d",
+          "#ba9e8f",
+          "#e0c2b2",
+          "#feeadf"
+        ]
+      },
+      "print": {
+        "role": "neutral",
+        "displayName": "Dial Print",
+        "canonical": "#f1e3c4",
+        "tonalRamp": [
+          "#110a00",
+          "#2e2309",
+          "#4c4126",
+          "#6c6045",
+          "#8e8165",
+          "#b1a486",
+          "#d6c8aa",
+          "#fbedce"
+        ]
+      },
+      "dim": {
+        "role": "neutral",
+        "displayName": "Aged Print",
+        "canonical": "#c4ad8e",
+        "tonalRamp": [
+          "#120900",
+          "#332104",
+          "#523e22",
+          "#725d41",
+          "#947e61",
+          "#b8a182",
+          "#ddc5a6",
+          "#feebd2"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faded Print",
+        "canonical": "#a08a6d",
+        "tonalRamp": [
+          "#130900",
+          "#332106",
+          "#513e23",
+          "#725d42",
+          "#947e62",
+          "#b8a183",
+          "#ddc5a7",
+          "#feebd3"
+        ]
+      },
+      "amber": {
+        "role": "primary",
+        "displayName": "Dial Amber",
+        "canonical": "#f2b544",
+        "tonalRamp": [
+          "#120900",
+          "#332102",
+          "#573d08",
+          "#7e5a13",
+          "#a97811",
+          "#d4991b",
+          "#fbbd4e",
+          "#ffecce"
+        ]
+      },
+      "amber-hover": {
+        "role": "primary",
+        "displayName": "Warm Bulb",
+        "canonical": "#f6c566",
+        "tonalRamp": [
+          "#110a00",
+          "#322200",
+          "#563d03",
+          "#7d5b0a",
+          "#a47a1c",
+          "#cc9d3a",
+          "#f2c162",
+          "#feeccc"
+        ]
+      },
+      "amber-ink": {
+        "role": "primary",
+        "displayName": "Amber Ink",
+        "canonical": "#2a1a0c",
+        "tonalRamp": [
+          "#150700",
+          "#312113",
+          "#503e2f",
+          "#705d4d",
+          "#927e6d",
+          "#b6a18f",
+          "#dbc5b3",
+          "#feebdb"
+        ]
+      },
+      "needle": {
+        "role": "secondary",
+        "displayName": "Needle Red",
+        "canonical": "#d9472f",
+        "tonalRamp": [
+          "#1e0100",
+          "#490902",
+          "#791909",
+          "#b31d01",
+          "#db4931",
+          "#fe755d",
+          "#fdb4a5",
+          "#fee9e5"
+        ]
+      },
+      "eye": {
+        "role": "tertiary",
+        "displayName": "Magic-Eye Green",
+        "canonical": "#6fc39f",
+        "tonalRamp": [
+          "#000f08",
+          "#012d1e",
+          "#084e37",
+          "#137253",
+          "#409573",
+          "#65b995",
+          "#89deb9",
+          "#c3fee2"
+        ]
+      },
+      "warn": {
+        "role": "tertiary",
+        "displayName": "Warn Amber",
+        "canonical": "#f2b544",
+        "tonalRamp": [
+          "#120900",
+          "#332102",
+          "#573d08",
+          "#7e5a13",
+          "#a97811",
+          "#d4991b",
+          "#fbbd4e",
+          "#ffecce"
+        ]
+      },
+      "bad": {
+        "role": "tertiary",
+        "displayName": "Fault Coral",
+        "canonical": "#ef6a52",
+        "tonalRamp": [
+          "#1e0100",
+          "#490a02",
+          "#7d1100",
+          "#ac2b15",
+          "#d4523b",
+          "#fd765e",
+          "#fcb5a6",
+          "#ffe9e4"
+        ]
+      },
+      "bad-ink": {
+        "role": "tertiary",
+        "displayName": "Fault Blush",
+        "canonical": "#ffc4b8",
+        "tonalRamp": [
+          "#1e0100",
+          "#41150e",
+          "#62332a",
+          "#845248",
+          "#a87368",
+          "#cd958a",
+          "#f3b9ad",
+          "#fee9e5"
+        ]
+      },
+      "glass-off": {
+        "role": "neutral",
+        "displayName": "Glass Off",
+        "canonical": "#170f0b",
+        "tonalRamp": [
+          "#110906",
+          "#2c231e",
+          "#49403b",
+          "#695f5a",
+          "#8b807a",
+          "#aea29d",
+          "#d2c6c0",
+          "#f8ece6"
+        ]
+      },
+      "glass-warm": {
+        "role": "primary",
+        "displayName": "Lit Glass, warm stop",
+        "canonical": "#6a4512",
+        "tonalRamp": [
+          "#140800",
+          "#352003",
+          "#5d3901",
+          "#7f5828",
+          "#a27a4a",
+          "#c69c6c",
+          "#ecc08f",
+          "#feebd6"
+        ]
+      },
+      "glass-mid": {
+        "role": "primary",
+        "displayName": "Lit Glass, middle stop",
+        "canonical": "#3d2711",
+        "tonalRamp": [
+          "#150800",
+          "#352009",
+          "#543d26",
+          "#755c45",
+          "#977d65",
+          "#bb9f86",
+          "#e0c3aa",
+          "#feebd9"
+        ]
+      },
+      "glass-edge": {
+        "role": "primary",
+        "displayName": "Lit Glass, edge stop",
+        "canonical": "#1f150d",
+        "tonalRamp": [
+          "#120903",
+          "#2d231a",
+          "#4b3f36",
+          "#6b5f55",
+          "#8d8075",
+          "#b0a298",
+          "#d5c6bb",
+          "#faebe0"
+        ]
+      },
+      "singer-sky": {
+        "role": "singer",
+        "displayName": "Singer Sky",
+        "canonical": "#9fd0f0",
+        "tonalRamp": [
+          "#000d17",
+          "#00283d",
+          "#174762",
+          "#396783",
+          "#5a89a6",
+          "#7caccb",
+          "#9fd0f1",
+          "#def2ff"
+        ]
+      },
+      "singer-rose": {
+        "role": "singer",
+        "displayName": "Singer Rose",
+        "canonical": "#e9a6c9",
+        "tonalRamp": [
+          "#1c0010",
+          "#420c2e",
+          "#632b4b",
+          "#864b6b",
+          "#aa6c8d",
+          "#cf8eb0",
+          "#f5b2d5",
+          "#ffe7f3"
+        ]
+      },
+      "singer-lime": {
+        "role": "singer",
+        "displayName": "Singer Lime",
+        "canonical": "#b9d98a",
+        "tonalRamp": [
+          "#070e00",
+          "#1d2a01",
+          "#354a06",
+          "#516c1d",
+          "#718e42",
+          "#93b264",
+          "#b7d788",
+          "#dbfdac"
+        ]
+      },
+      "singer-apricot": {
+        "role": "singer",
+        "displayName": "Singer Apricot",
+        "canonical": "#f0a77a",
+        "tonalRamp": [
+          "#170600",
+          "#3c1a02",
+          "#683000",
+          "#8f4e20",
+          "#b36f43",
+          "#d99265",
+          "#fcb88e",
+          "#ffeade"
+        ]
+      },
+      "singer-lilac": {
+        "role": "singer",
+        "displayName": "Singer Lilac",
+        "canonical": "#c6b3f5",
+        "tonalRamp": [
+          "#100027",
+          "#2b174c",
+          "#48356d",
+          "#675590",
+          "#8976b4",
+          "#ab99d9",
+          "#cfbefb",
+          "#f0ebff"
+        ]
+      },
+      "singer-mint": {
+        "role": "singer",
+        "displayName": "Singer Mint",
+        "canonical": "#8fd6c8",
+        "tonalRamp": [
+          "#000f0c",
+          "#032c26",
+          "#014e44",
+          "#266f63",
+          "#4b9184",
+          "#6eb5a7",
+          "#92d9cb",
+          "#bcfef1"
+        ]
+      },
+      "singer-butter": {
+        "role": "singer",
+        "displayName": "Singer Butter",
+        "canonical": "#f5d77a",
+        "tonalRamp": [
+          "#100b00",
+          "#2e2402",
+          "#514000",
+          "#765f03",
+          "#9c7f17",
+          "#c0a244",
+          "#e5c76a",
+          "#feeebd"
+        ]
+      },
+      "singer-coral": {
+        "role": "singer",
+        "displayName": "Singer Coral",
+        "canonical": "#f28b82",
+        "tonalRamp": [
+          "#1e0001",
+          "#4d0005",
+          "#771b1b",
+          "#9d3e39",
+          "#c36159",
+          "#ea847b",
+          "#fbb5ad",
+          "#fee9e6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Current song title in the panel dial head; 34px under 760px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Panel sheet headings; phone page and now-playing titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Library song names, phone lyrics title; summary lines at 1.4."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "Dial clock and position, amber, tabular numerals."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading text; row names at 500/1.3; paragraphs capped at 68ch."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Meta lines and secondary row text."
+      },
+      "band-heading": {
+        "displayName": "Band Heading",
+        "purpose": "Each band's own heading, faint uppercase; phone h3."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, chips, tabs, field labels, badges, the singer column (13-15px, 500-600)."
+      },
+      "scale-print": {
+        "displayName": "Scale Print",
+        "purpose": "Clock-time numerals on the dial; quarter hours full print at 600."
+      }
+    },
+    "typeScale": {
+      "t1": "13px",
+      "t2": "15px",
+      "t3": "17px",
+      "t4": "20px",
+      "t5": "26px",
+      "t6": "34px",
+      "t7": "44px"
+    },
+    "singerPalette": {
+      "order": [
+        "singer-sky",
+        "singer-rose",
+        "singer-lime",
+        "singer-apricot",
+        "singer-lilac",
+        "singer-mint",
+        "singer-butter",
+        "singer-coral"
+      ],
+      "pick": "x = 0; for each code point c of String(name || '?'): x = (x * 31 + c) >>> 0; colour = palette[x % 8]",
+      "sources": [
+        "panel/static/index.html singerColor",
+        "templates/index.html singerColor"
+      ]
+    },
+    "gradients": [
+      {
+        "name": "glass-lit",
+        "value": "radial-gradient(130% 160% at 35% 125%, #6a4512 0%, #3d2711 42%, #1f150d 100%)",
+        "purpose": "The backlit dial glass; the only light source."
+      },
+      {
+        "name": "scale-ticks",
+        "value": "repeating-linear-gradient(90deg, rgba(241,227,196,.75) 0 2px, transparent 2px var(--min)), repeating-linear-gradient(90deg, rgba(241,227,196,.32) 0 1px, transparent 1px calc(var(--min) / 4))",
+        "purpose": "Minute and quarter-minute ticks."
+      },
+      {
+        "name": "lit-span",
+        "value": "linear-gradient(90deg, rgba(242,181,68,0), rgba(242,181,68,.28))",
+        "purpose": "Dial lit up to now."
+      },
+      {
+        "name": "eye-ok",
+        "value": "radial-gradient(circle, #d9fbe9 0 16%, var(--eye) 42%, #1d4a37 78%)",
+        "purpose": "Magic eye: healthy."
+      },
+      {
+        "name": "eye-warn",
+        "value": "radial-gradient(circle, #fff1c9 0 16%, var(--warn) 42%, #5a3b0c 78%)",
+        "purpose": "Magic eye: starting, stopping, degraded."
+      },
+      {
+        "name": "eye-failed",
+        "value": "radial-gradient(circle, #ffd9d0 0 16%, var(--bad) 42%, #5a1a10 78%)",
+        "purpose": "Magic eye: failed."
+      },
+      {
+        "name": "eye-off",
+        "value": "radial-gradient(circle, #3a2b20 0 35%, #22180f 80%)",
+        "purpose": "Magic eye: stopped, dark tube."
+      },
+      {
+        "name": "slider-track",
+        "value": "linear-gradient(90deg, rgba(242,181,68,.5), rgba(242,181,68,.2))",
+        "purpose": "Phone range-slider track."
+      }
+    ],
+    "shadows": [
+      {
+        "name": "selection-ring",
+        "value": "inset 0 0 0 1px var(--line)",
+        "purpose": "Selected band button, phone secondary popup button, phone control well."
+      },
+      {
+        "name": "chip-on-ring",
+        "value": "inset 0 0 0 1px var(--amber)",
+        "purpose": "Selected filter chip."
+      },
+      {
+        "name": "nav-underline",
+        "value": "inset 0 -3px 0 var(--amber)",
+        "purpose": "Phone active navbar item."
+      },
+      {
+        "name": "label-lift",
+        "value": "text-shadow: 0 1px 2px rgba(0,0,0,.6)",
+        "purpose": "Dial segment text over the glass only."
+      }
+    ],
+    "focusRing": {
+      "value": "outline: 2px solid var(--amber); outline-offset: 2px",
+      "purpose": "Every focusable element on both surfaces."
+    },
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "--ease: the warm-up and band-selector transitions."
+      },
+      {
+        "name": "warm-up",
+        "value": "background 1.6s var(--ease); .scale opacity 1.6s var(--ease)",
+        "purpose": "Panel glass turning on (Glass Off to Lit Glass)."
+      },
+      {
+        "name": "needle",
+        "value": "left .5s linear",
+        "purpose": "Needle steps toward now every 500ms (panel), on each status (phone)."
+      },
+      {
+        "name": "eye-pulse",
+        "value": "warm 1.6s ease-in-out infinite (opacity to .45)",
+        "purpose": "Starting/stopping magic eye."
+      },
+      {
+        "name": "control-state",
+        "value": ".2s-.25s background, border-color, color",
+        "purpose": "Buttons and band selector."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "panel: all transitions and animations 0s; phone: needle transition none",
+        "purpose": "prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "760px"
+      }
+    ],
+    "dialMetrics": {
+      "panelPxPerMinute": 120,
+      "panelTinySegmentBelow": "70px",
+      "panelFollowAt": "30% of glass width",
+      "phonePxPerMinute": 70,
+      "phoneStationWidth": "190px",
+      "phoneFollowAt": "60% of glass width",
+      "browseHold": "8s"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Amber pill for the one primary action of a band or popup (Start, OK).",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Start</button>",
+      "css": ".ds-btn { border: 1px solid var(--line, #4a3326); background: transparent; color: var(--print, #f1e3c4); cursor: pointer; border-radius: 999px; padding: 9px 18px; font: 600 15px/1 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; transition: background .2s, border-color .2s, color .2s; } .ds-btn:hover { border-color: var(--dim, #c4ad8e); } .ds-btn:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; } .ds-btn-primary { background: var(--amber, #f2b544); border-color: var(--amber, #f2b544); color: var(--amber-ink, #2a1a0c); } .ds-btn-primary:hover { background: #f6c566; border-color: #f6c566; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Rule-outlined pill for secondary actions; danger variant is coral text and half-alpha outline.",
+      "html": "<button class=\"ds-btn2\">Stop</button> <button class=\"ds-btn2 ds-btn2-danger\">Delete</button>",
+      "css": ".ds-btn2 { border: 1px solid var(--line, #4a3326); background: transparent; color: var(--print, #f1e3c4); cursor: pointer; border-radius: 999px; padding: 9px 18px; font: 600 15px/1 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; transition: border-color .2s, color .2s; } .ds-btn2:hover { border-color: var(--dim, #c4ad8e); } .ds-btn2:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; } .ds-btn2-danger { color: var(--bad, #ef6a52); border-color: rgba(239,106,82,.5); }"
+    },
+    {
+      "name": "Text Action",
+      "kind": "button",
+      "refersTo": "text-action",
+      "description": "Quiet condensed-caps row action with no chrome.",
+      "html": "<button class=\"ds-link\">rename</button> <button class=\"ds-link ds-link-danger\">delete</button>",
+      "css": ".ds-link { border: 0; background: none; padding: 4px 2px; cursor: pointer; color: var(--faint, #a08a6d); font: 500 13px 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; } .ds-link:hover { color: var(--print, #f1e3c4); } .ds-link:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; border-radius: 6px; } .ds-link-danger { color: var(--bad, #ef6a52); }"
+    },
+    {
+      "name": "Band Selector",
+      "kind": "nav",
+      "refersTo": "band-selector",
+      "description": "Pill track choosing where the radio plays; the live band fills amber.",
+      "html": "<div class=\"ds-band\"><button class=\"ds-band-b ds-sel ds-live\">This monitor</button><button class=\"ds-band-b\">TV</button><button class=\"ds-band-b\">Public</button></div>",
+      "css": ".ds-band { display: inline-flex; background: var(--cab, #261a13); border-radius: 999px; padding: 4px; gap: 2px; } .ds-band-b { border: 0; background: transparent; color: var(--dim, #c4ad8e); cursor: pointer; border-radius: 999px; padding: 8px 16px; font: 500 15px/1 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; transition: background .25s cubic-bezier(.16,1,.3,1), color .25s cubic-bezier(.16,1,.3,1); } .ds-band-b:hover { color: var(--print, #f1e3c4); } .ds-band-b:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; } .ds-sel { background: var(--cab-2, #31211a); color: var(--print, #f1e3c4); box-shadow: inset 0 0 0 1px var(--line, #4a3326); } .ds-sel.ds-live { background: var(--amber, #f2b544); color: var(--amber-ink, #2a1a0c); box-shadow: none; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Cabinet pill filter; on state gains an amber inset ring.",
+      "html": "<button class=\"ds-chip ds-chip-on\">All <b>90</b></button> <button class=\"ds-chip\">No lyrics <b>3</b></button>",
+      "css": ".ds-chip { border: 0; background: var(--cab, #261a13); color: var(--dim, #c4ad8e); border-radius: 999px; padding: 7px 13px; font: 500 15px/1 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; } .ds-chip:hover { color: var(--print, #f1e3c4); } .ds-chip:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; } .ds-chip b { color: var(--faint, #a08a6d); font-weight: 500; margin-left: 5px; } .ds-chip-on { background: var(--cab-2, #31211a); color: var(--print, #f1e3c4); box-shadow: inset 0 0 0 1px var(--amber, #f2b544); }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Cabinet-inset field with a condensed caps label; amber border on focus.",
+      "html": "<label class=\"ds-label\">Party name<input class=\"ds-field\" type=\"text\" placeholder=\"Saturday at home\"></label>",
+      "css": ".ds-label { display: flex; flex-direction: column; gap: 6px; font: 500 15px 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; color: var(--faint, #a08a6d); } .ds-field { background: var(--cab-2, #31211a); border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; color: var(--print, #f1e3c4); font: 400 17px/1.4 Barlow, 'Noto Sans', system-ui, sans-serif; letter-spacing: 0; text-transform: none; caret-color: var(--amber, #f2b544); } .ds-field::placeholder { color: var(--faint, #a08a6d); } .ds-field:hover { border-color: var(--line, #4a3326); } .ds-field:focus { border-color: var(--amber, #f2b544); outline: none; }"
+    },
+    {
+      "name": "Service Row with Magic Eye",
+      "kind": "custom",
+      "refersTo": "magic-eye",
+      "description": "Ruled band row led by a radial-gradient magic-eye tube showing service health.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-eye ds-ok\"></span><span class=\"ds-name\">Voice server</span><button class=\"ds-rlink\">log</button></div><div class=\"ds-row\"><span class=\"ds-eye ds-warm\"></span><span class=\"ds-name\">App on the TV</span><button class=\"ds-rlink\">log</button></div><div class=\"ds-row\"><span class=\"ds-eye ds-failed\"></span><span class=\"ds-name\">Tunnel</span><button class=\"ds-rlink\">log</button></div><div class=\"ds-row\"><span class=\"ds-eye\"></span><span class=\"ds-name\">Stopped</span><span></span></div>",
+      "css": ".ds-row { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; align-items: center; gap: 2px 10px; padding: 12px 0; border-top: 1px solid var(--line, #4a3326); color: var(--print, #f1e3c4); font: 500 17px/1.3 Barlow, 'Noto Sans', system-ui, sans-serif; } .ds-eye { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #3a2b20 0 35%, #22180f 80%); } .ds-ok { background: radial-gradient(circle, #d9fbe9 0 16%, #6fc39f 42%, #1d4a37 78%); } .ds-warm { background: radial-gradient(circle, #fff1c9 0 16%, #f2b544 42%, #5a3b0c 78%); animation: ds-warm 1.6s ease-in-out infinite; } .ds-failed { background: radial-gradient(circle, #ffd9d0 0 16%, #ef6a52 42%, #5a1a10 78%); } @keyframes ds-warm { 50% { opacity: .45; } } .ds-rlink { border: 0; background: none; padding: 4px 2px; cursor: pointer; color: var(--faint, #a08a6d); font: 500 13px 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; } .ds-rlink:hover { color: var(--print, #f1e3c4); } .ds-rlink:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; } @media (prefers-reduced-motion: reduce) { .ds-warm { animation: none; } }"
+    },
+    {
+      "name": "Tonight's Dial",
+      "kind": "custom",
+      "refersTo": "dial-glass",
+      "description": "Signature: sideways-scrolling tuning scale on backlit amber glass; red needle at now, songs as singer-coloured segments.",
+      "html": "<div class=\"ds-glass\" tabindex=\"0\" aria-label=\"Tonight's songs, scroll sideways\"><div class=\"ds-track\"><div class=\"ds-scale\"></div><div class=\"ds-lit\"></div><span class=\"ds-lbl ds-q\" style=\"left:0\">21:00</span><span class=\"ds-lbl\" style=\"left:120px\">21:01</span><span class=\"ds-lbl\" style=\"left:240px\">21:02</span><span class=\"ds-lbl\" style=\"left:360px\">21:03</span><div class=\"ds-seg ds-past\" style=\"left:0;width:176px;color:#9fd0f0\"><span>De música ligera</span><b>Facu</b></div><div class=\"ds-seg\" style=\"left:180px;width:236px;color:#e9a6c9\"><span>Cruel Angel's Thesis</span><b>Sofi</b></div><div class=\"ds-seg\" style=\"left:420px;width:200px;color:#b9d98a\"><span>Persiana americana</span><b>Mati</b></div><div class=\"ds-needle\" style=\"left:290px\"></div></div></div>",
+      "css": ".ds-glass { position: relative; border-radius: 12px; overflow-x: auto; overflow-y: hidden; height: 150px; overscroll-behavior-x: contain; background: radial-gradient(130% 160% at 35% 125%, #6a4512 0%, #3d2711 42%, #1f150d 100%); } .ds-glass:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; } .ds-track { position: relative; height: 100%; width: 720px; --min: 120px; } .ds-scale { position: absolute; inset: 14px 0 auto 0; height: 26px; background: repeating-linear-gradient(90deg, rgba(241,227,196,.75) 0 2px, transparent 2px var(--min)), repeating-linear-gradient(90deg, rgba(241,227,196,.32) 0 1px, transparent 1px calc(var(--min) / 4)); background-size: 100% 26px, 100% 14px; background-repeat: no-repeat; } .ds-lit { position: absolute; left: 0; top: 14px; width: 290px; height: 26px; background: linear-gradient(90deg, rgba(242,181,68,0), rgba(242,181,68,.28)); } .ds-lbl { position: absolute; top: 44px; transform: translateX(-50%); font: 500 13px/1 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .08em; color: rgba(241,227,196,.72); font-variant-numeric: tabular-nums; } .ds-lbl.ds-q { color: var(--print, #f1e3c4); font-weight: 600; transform: none; } .ds-seg { position: absolute; z-index: 2; bottom: 18px; height: 42px; padding: 0 10px; border-left: 2px solid currentColor; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; } .ds-seg::after { content: ''; position: absolute; left: 0; right: 4px; bottom: 0; height: 4px; border-radius: 0 3px 3px 0; background: currentColor; opacity: .55; } .ds-seg b, .ds-seg span { text-shadow: 0 1px 2px rgba(0,0,0,.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-seg b { font: 600 15px/1.15 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; } .ds-seg span { font: 400 13px/1.2 Barlow, 'Noto Sans', system-ui, sans-serif; color: var(--print, #f1e3c4); margin-bottom: 8px; opacity: .85; } .ds-seg.ds-past { opacity: .5; } .ds-seg:hover { opacity: 1; } .ds-needle { position: absolute; z-index: 1; top: 8px; bottom: 8px; width: 3px; margin-left: -1px; border-radius: 2px; background: var(--needle, #d9472f); transition: left .5s linear; } @media (prefers-reduced-motion: reduce) { .ds-needle { transition: none; } }"
+    },
+    {
+      "name": "QR Plate",
+      "kind": "card",
+      "refersTo": "qr-plate",
+      "description": "Small cream plate for a join code; multiply blending turns its white to cream.",
+      "html": "<div class=\"ds-code\"><div class=\"ds-qr\"><svg viewBox=\"0 0 21 21\" width=\"100%\" aria-hidden=\"true\"><path fill=\"#000\" d=\"M0 0h7v7H0zM2 2v3h3V2zM14 0h7v7h-7zM16 2v3h3V2zM0 14h7v7H0zM2 16v3h3v-3zM9 0h2v2H9zM9 4h3v3H9zM8 9h5v2H8zM14 9h2v3h-2zM17 9h4v2h-4zM9 13h2v3H9zM12 14h3v2h-3zM16 14h2v4h-2zM19 13h2v2h-2zM9 18h4v3H9zM14 18h1v3h-1zM19 17h2v4h-2z\"/></svg></div><b>Phones</b><a href=\"#\">192.168.1.20:5555</a></div>",
+      "css": ".ds-code { text-align: center; width: 150px; color: var(--print, #f1e3c4); } .ds-qr { background: var(--print, #f1e3c4); border-radius: 8px; padding: 8px; max-width: 132px; margin: 0 auto 10px; } .ds-qr svg { display: block; mix-blend-mode: multiply; } .ds-code b { display: block; font: 600 15px/1.2 'Barlow Condensed', Barlow, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; } .ds-code a { font: 500 13px/1.3 Barlow, 'Noto Sans', system-ui, sans-serif; color: var(--amber, #f2b544); text-underline-offset: 3px; } .ds-code a:hover { color: #f6c566; } .ds-code a:focus-visible { outline: 2px solid var(--amber, #f2b544); outline-offset: 2px; border-radius: 6px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Radio de living",
+    "overview": "The house's own console radio, tuned to tonight. Both surfaces, the host's admin panel and the guests' phone site, are the front of one walnut cabinet radio in a dim living room at night. The ground is a flat walnut tint (never woodgrain). Cabinet bands sit one step lighter, and text is printed in cream like the lettering on a dial. The one lit thing is the backlit amber glass of the tuning dial, with a red needle across it. Health shows as magic-eye tubes, green when a service is fine and a dark dead tube when it is off.\n\nDensity is calm and readable at arm's length. Type scale and space carry the hierarchy, never containers. Sections are bands separated by 1px rules, and rows share one baseline. Labels and numerals use condensed dial-scale caps. Reading text uses a warm workhorse sans. Each singer owns one fixed dial colour everywhere they appear, so a name is recognisable at a glance across the panel, the phone and the dial.\n\nThe system rejects two things: the boxed dark dashboard (card grids, KPI tiles, nested panels) and the neon karaoke bar (glows, saturated gradients, arcade type). It is dark because of the scene, not as a style choice: no large bright surface may blind a room whose lights are off.",
+    "keyCharacteristics": [
+      "Flat walnut ground with cabinet bands one tonal step up, ruled by 1px lines.",
+      "Backlit amber glass is the only lit surface, made with a radial gradient, never a glow shadow.",
+      "Tonight's dial is the signature: a sideways-scrolling tuning scale where the needle is now and songs are stations.",
+      "One fixed 8-colour singer palette, hashed from the name, shared by both surfaces.",
+      "Condensed caps for labels, numerals and buttons. Barlow sans for reading.",
+      "Pill controls, quiet text actions, and no elevation."
+    ],
+    "rules": [
+      {
+        "name": "The One Light Rule",
+        "body": "Amber glass is the only lit surface on the page. Light comes from a background gradient, never from a glow shadow. Indicators (the eyes, the needle, singer colour) are small and are not light sources.",
+        "section": "colors"
+      },
+      {
+        "name": "The Same Singer Rule",
+        "body": "A singer's colour comes only from the shared 8-colour palette, through the name hash. Never assign singer colours by position, by role or by hand.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink On Amber Rule",
+        "body": "Anything filled with amber carries Amber Ink text.",
+        "section": "colors"
+      },
+      {
+        "name": "The Seven Steps Rule",
+        "body": "Type sizes come only from `--t1` to `--t7`. Hierarchy is made by jumping steps and by space, never by boxing.",
+        "section": "typography"
+      },
+      {
+        "name": "The Dial Print Rule",
+        "body": "Uppercase tracked lettering is for labels, numerals, buttons and band headings only. Song titles and sentences are never in caps.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Numbers Rule",
+        "body": "Clock times, counts and positions use tabular numerals so the readout doesn't jitter as it ticks.",
+        "section": "typography"
+      },
+      {
+        "name": "The Band Not Box Rule",
+        "body": "Content sections are bands separated by 1px rules, never boxed cards. Filled rounded surfaces are reserved for the dial cabinet, popups, the welcome preview and inset wells (file lists, fields), and they never nest.",
+        "section": "layout"
+      },
+      {
+        "name": "The One Line Count Rule",
+        "body": "There are no KPI tiles. A count is one line of dial print, emphasised only where it needs action.",
+        "section": "layout"
+      },
+      {
+        "name": "The No Glow Rule",
+        "body": "Nothing casts light. A shadow is only an inset ring or the dial's legibility text-shadow, and is never an outer glow or a drop shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do separate content sections with a 1px Rule line and let type steps and space carry the hierarchy.",
+      "Do light the dial glass with its radial-gradient background, never with a shadow.",
+      "Do colour every singer mention through the shared 8-colour palette and the name hash, on both surfaces.",
+      "Do put Amber Ink on any amber fill, and keep amber for \"on\", \"yours to press\" and the focus ring.",
+      "Do use quiet condensed-caps text actions for row actions, and amber or outlined pills for a band's primary and secondary actions.",
+      "Do theme the browser's own surfaces: amber selection with ink text, Rule-coloured thin scrollbars, an amber caret, and a 2px amber focus ring with a 2px offset.",
+      "Do show health with the magic-eye states (green ok, amber starting or degraded, coral failed, dark tube stopped).",
+      "Do keep tap targets at 44px or more on the phone (48px fields, 48–52px popup actions).",
+      "Do put any QR code or other must-be-light asset on a small cream plate with multiply blending."
+    ],
+    "donts": [
+      "Don't box content sections as cards, nest a filled surface inside another, or build KPI tiles. A count is one line.",
+      "Don't add glows, drop shadows or neon gradients. The only light is the amber glass.",
+      "Don't introduce large bright surfaces. The room is dark.",
+      "Don't use woodgrain or texture. Walnut is a flat tint.",
+      "Don't set type outside the `--t1` to `--t7` steps, or put song titles and sentences in uppercase.",
+      "Don't use Needle Red for anything but the needle, the slider thumb and the hot badge.",
+      "Don't fill danger actions. Danger is coral text with a half-alpha outline."
+    ]
+  }
+}
