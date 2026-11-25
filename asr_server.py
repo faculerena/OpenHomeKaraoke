@@ -17,7 +17,7 @@
 # Whisper model (-m / $ASR_MODEL): tiny|base|small|medium|large-v3 (bigger = more accurate, slower).
 # Keep responses under app.py's 8s ASR timeout; "small" or "medium" are good on this GPU.
 
-import os, io, sys, uuid, tempfile, tarfile, argparse, threading, shutil, logging
+import os, io, sys, uuid, tempfile, tarfile, argparse, threading, shutil, logging, time
 import torch
 from types import SimpleNamespace
 from flask import Flask, request, jsonify, Response
@@ -31,7 +31,10 @@ app = Flask(__name__)
 G = SimpleNamespace()
 asr_lock = threading.Lock()      # serialize Whisper calls
 split_lock = threading.Lock()    # serialize DNN splits (independent of ASR so a long split never blocks voice search)
-gen_lock = threading.Lock()      # serialize karaoke .ass generation (one heavy Whisper run at a time)
+# One song build at a time. Overlapping two (one splitting while the other aligns) was tried
+# and measured SLOWER on this Radeon: both GPU stages slow each other down (2 songs: 30s
+# overlapped vs ~19s one after the other). The lyrics download still overlaps the split.
+gen_lock = threading.Semaphore(1)
 jobs = {}                        # remote karaoke jobs: id -> {'state': pending|done|error, 'dir': tmpdir}
 jobs_lock = threading.Lock()
 
@@ -54,9 +57,9 @@ class _doing:
 
 
 class _gen_slot:
-	"""with _gen_slot(name): take gen_lock (one heavy build at a time, avoids GPU OOM under
-	bursts), counting the wait as backlog and the hold as the build in progress."""
-	def __init__(self, name):
+	"""with _gen_slot(): take one of the build slots, counting the wait as backlog. Which song
+	is splitting / aligning right now is reported by _doing() inside the stages."""
+	def __init__(self, name=None):
 		self.name = name
 	def __enter__(self):
 		with activity_lock:
@@ -64,11 +67,27 @@ class _gen_slot:
 		gen_lock.acquire()
 		with activity_lock:
 			activity['karaoke_waiting'] -= 1
-			activity['karaoke'] = self.name
 	def __exit__(self, *exc):
-		with activity_lock:
-			activity['karaoke'] = None
 		gen_lock.release()
+
+
+def _prefetch_lyrics(media):
+	"""Start fetching the song's synced lyrics (network: LRCLIB / YouTube Music) in the
+	background, so they are ready by the time the vocal split is done."""
+	from lib import forced_align
+	box = {}
+	def run():
+		try:
+			box['lrc'] = forced_align.fetch_lyrics(forced_align.song_query(media))
+		except Exception as e:
+			print(f'karaoke: lyrics fetch failed for {os.path.basename(media)}: {e}', file=sys.stderr, flush=True)
+			box['lrc'] = None
+	t = threading.Thread(target=run, daemon=True)
+	t.start()
+	def result():
+		t.join(30)
+		return box.get('lrc')
+	return result
 
 
 def load_models(args):
@@ -149,8 +168,7 @@ def split_vocal():
 		VS.ffm_video2wav(in_m4a, in_wav)
 		with split_lock, _doing('split', os.path.basename(request.form.get('name') or f.filename or 'song')):
 			VS.split_vocal_by_dnn(in_wav, nv_wav, v_wav, G.split_args)
-		VS.ffm_wav2m4a(nv_wav, nv_m4a)
-		VS.ffm_wav2m4a(v_wav, v_m4a)
+		VS.encode_stems([(nv_wav, nv_m4a), (v_wav, v_m4a)])
 		buf = io.BytesIO()
 		with tarfile.open(fileobj=buf, mode='w:gz') as tar:
 			tar.add(nv_m4a, arcname='nonvocal.m4a')
@@ -194,14 +212,15 @@ def _run_job(job, src, d):
 	"""Remote mode: split + align an uploaded song, then park the results for collection."""
 	state = 'error'
 	try:
-		with _gen_slot(os.path.basename(src)):
+		with _gen_slot():
+			lyrics = _prefetch_lyrics(src)
 			vocal, nonvocal = f'{d}/vocal.m4a', f'{d}/nonvocal.m4a'
 			try:
 				_split(src, nonvocal, vocal)
 			except Exception as e:
 				print(f'karaoke: split failed, using full mix: {e}', file=sys.stderr, flush=True)
 			audio = vocal if os.path.isfile(vocal) else src
-			ass = _karaoke_ass(src, audio)
+			ass = _karaoke_ass(src, audio, lyrics)
 			open(f'{d}/karaoke.ass', 'w', encoding='utf-8').write(ass)
 			state = 'done'
 	except Exception as e:
@@ -238,25 +257,44 @@ def karaoke_result(job):
 
 
 def _split(media, nonvocal_m4a, vocal_m4a):
-	"""Run the vocal-remover DNN over `media`, writing both stems as m4a."""
-	tmp = tempfile.mkdtemp(prefix='ohk_gk_')
+	"""Run the vocal-remover DNN over `media`, writing BOTH stems as m4a (encoded at once).
+	Each stem appears in one step (written beside, then renamed), so the app never sees half
+	a file. Temp files go to RAM (/dev/shm) when it exists."""
+	tmp = tempfile.mkdtemp(prefix='ohk_gk_', dir='/dev/shm' if os.path.isdir('/dev/shm') else None)
 	try:
+		t0 = time.time()
 		VS.ffm_video2wav(media, f'{tmp}/in.wav')
+		t1 = time.time()
 		with split_lock, _doing('split', os.path.basename(media)):
+			t2 = time.time()
 			VS.split_vocal_by_dnn(f'{tmp}/in.wav', f'{tmp}/nv.wav', f'{tmp}/v.wav', G.split_args)
-		VS.ffm_wav2m4a(f'{tmp}/v.wav', vocal_m4a)
-		VS.ffm_wav2m4a(f'{tmp}/nv.wav', nonvocal_m4a)
+		t3 = time.time()
+		if not VS.encode_stems([(f'{tmp}/v.wav', f'{tmp}/v.m4a'), (f'{tmp}/nv.wav', f'{tmp}/nv.m4a')]):
+			raise RuntimeError('stem encode failed')
+		print(f'split: {os.path.basename(media)}: extract {t1-t0:.1f}s, waited {t2-t1:.1f}s, '
+		      f'split {t3-t2:.1f}s, encode {time.time()-t3:.1f}s', flush=True)
+		for src, dst in ((f'{tmp}/v.m4a', vocal_m4a), (f'{tmp}/nv.m4a', nonvocal_m4a)):
+			os.makedirs(os.path.dirname(dst) or '.', exist_ok=True)
+			shutil.move(src, dst + '.part')
+			os.replace(dst + '.part', dst)
 	finally:
 		shutil.rmtree(tmp, ignore_errors=True)
 
 
-def _karaoke_ass(media, audio):
-	"""Real lyrics (LRCLIB/YT Music) force-aligned to `audio` -> ASS color-wipe text."""
+def _karaoke_ass(media, audio, lyrics=None):
+	"""Real lyrics (LRCLIB/YT Music) force-aligned to `audio` -> ASS color-wipe text.
+	`lyrics`: a callable returning lyrics prefetched by _prefetch_lyrics(), if any."""
 	from lib.karaoke_ass import segments_to_ass
 	from lib import forced_align
 	print(f'karaoke: building for {os.path.basename(media)} ...', flush=True)
-	with asr_lock:
-		segs, method = forced_align.make_segments(media, audio, G.whisper, G.device.type)
+	t0 = time.time()
+	extra = {'lrc': lyrics()} if lyrics else {}
+	t1 = time.time()
+	with asr_lock, _doing('karaoke', os.path.basename(media)):
+		t2 = time.time()
+		segs, method = forced_align.make_segments(media, audio, G.whisper, G.device.type, **extra)
+	print(f'karaoke: {os.path.basename(media)}: lyrics wait {t1-t0:.1f}s, align queue {t2-t1:.1f}s, '
+	      f'align {time.time()-t2:.1f}s', flush=True)
 	print(f'karaoke: built {os.path.basename(media)} [{method}]', flush=True)
 	return segments_to_ass(segs)
 
@@ -266,25 +304,24 @@ def _gen_karaoke(media):
 	dst = os.path.splitext(media)[0] + '.ass'
 	if os.path.isfile(dst):
 		return
-	with _gen_slot(os.path.basename(media)):
+	with _gen_slot():
 		if os.path.isfile(dst):
 			return
 		try:
 			d, base = os.path.dirname(media), os.path.basename(media)
+			lyrics = _prefetch_lyrics(media)       # network, runs while the split does
 			vocal = os.path.join(d, 'vocal', base + '.m4a')
-			# split vocals first for clean alignment (also populates the track for playback)
-			if not os.path.isfile(vocal) and os.path.isdir(os.path.join(d, 'vocal')):
+			nonvocal = os.path.join(d, 'nonvocal', base + '.m4a')
+			# Split first, for clean alignment. Write BOTH stems: before, only the vocal one was
+			# kept, so the app split the whole song a second time on its first play to get the
+			# music-only stem (and the MUSIC / VOICE switch stayed greyed out until then).
+			if not (os.path.isfile(vocal) and os.path.isfile(nonvocal)) and os.path.isdir(os.path.join(d, 'vocal')):
 				try:
-					tmp = tempfile.mkdtemp(prefix='ohk_gk_')
-					VS.ffm_video2wav(media, tmp + '/in.wav')
-					with split_lock, _doing('split', base):
-						VS.split_vocal_by_dnn(tmp + '/in.wav', tmp + '/nv.wav', tmp + '/v.wav', G.split_args)
-					VS.ffm_wav2m4a(tmp + '/v.wav', vocal)
-					shutil.rmtree(tmp, ignore_errors=True)
+					_split(media, nonvocal, vocal)
 				except Exception as e:
 					print(f'karaoke: split failed, using full mix: {e}', file=sys.stderr, flush=True)
 			audio = vocal if os.path.isfile(vocal) else media
-			ass = _karaoke_ass(media, audio)
+			ass = _karaoke_ass(media, audio, lyrics)
 			# build first, then appear in one step: the app polls for this file to decide a
 			# freshly-added song is ready to enqueue, so it must never be seen half-written
 			open(dst + '.part', 'w', encoding='utf-8').write(ass)

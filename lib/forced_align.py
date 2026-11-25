@@ -172,11 +172,16 @@ def align(audio_path, lrc, device='cuda'):
 	return segs or None
 
 
-def make_segments(media, audio_path, whisper_model, device='cuda', lang=None):
+_NOT_FETCHED = object()
+
+
+def make_segments(media, audio_path, whisper_model, device='cuda', lang=None, lrc=_NOT_FETCHED):
 	"""Preferred: real lyrics force-aligned. Fallback: Whisper transcription.
-	Returns (segments, method_description)."""
+	Returns (segments, method_description). Pass `lrc` when the lyrics were already fetched
+	(the GPU server fetches them over the network while the vocal split runs)."""
 	name = song_query(media)
-	lrc = fetch_lyrics(name)
+	if lrc is _NOT_FETCHED:
+		lrc = fetch_lyrics(name)
 	if lrc and ('[' in lrc):                       # need line timestamps to anchor alignment
 		segs = align(audio_path, lrc, device)
 		if segs:
