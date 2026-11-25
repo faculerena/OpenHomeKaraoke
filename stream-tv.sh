@@ -5,20 +5,50 @@
 # A browser keeps audio+video in sync (a couple seconds behind live, but locked together).
 #
 # Usage:  ./stream-tv.sh [-o OUTPUT|auto] [-p PORT] [-a AUDIO_SOURCE]
+#                        [-q QP] [-b KBPS] [-s HEIGHT] [-r FPS] [-A KBPS] [-l SECONDS]
 #   -o  Wayland output to capture   (default: first hyprctl monitor, e.g. DP-2;
 #                                    'auto' = the sole output on $WAYLAND_DISPLAY, e.g. a cage compositor)
 #   -p  HTTP port the TV opens      (default: 4000)
 #   -a  Pulse/PipeWire audio source (default: the default sink's .monitor)
 #
+# Bandwidth (what actually goes over the wire / the Cloudflare tunnel). Measured on this
+# machine at 720p30, video only: a busy music video ~1125 kbps and a static-image song with
+# lyrics ~460 kbps at the default qp=28 — roughly 45% off the old no-rate-control encode
+# (2045 / 787), with no visible difference on a TV.
+#   -q  quality, QP 20-34           (default: 28. Higher = smaller + softer. Quality-based,
+#                                    so an idle splash or a lyrics-only song stays cheap.)
+#   -b  hard bitrate cap, kbps      (default: none. Switches the encoder to VBR and REPLACES
+#                                    -q: it guarantees a ceiling, but the encoder then also
+#                                    SPENDS that budget on cheap frames — at -b 1500 the
+#                                    static song above costs 1355 instead of 461. Use it only
+#                                    when a hard ceiling matters more than the average.)
+#   -s  scale down to HEIGHT px     (default: none = native 720p. -s 540 takes the music
+#                                    video to ~870 kbps and the static one to ~350; lyrics
+#                                    stay readable.)
+#   -r  framerate                   (default: 30)
+#   -A  audio bitrate, kbps         (default: 128)
+#   -l  segment/keyframe seconds    (default: 0.5. Bigger = fewer keyframes = less
+#                                    bandwidth, but that much more delay on the TV.)
+# Each flag also has an env default: OHK_TV_QUALITY, OHK_TV_BITRATE, OHK_TV_SCALE,
+# OHK_TV_FPS, OHK_TV_ABITRATE, OHK_TV_SEG — that is how start-karaoke.sh -t passes them in.
+#
 # Then open  http://<this-ip>:<port>  in the TV's browser (e.g. TV Bro). Ctrl-C to stop.
 set -u
 
 OUTPUT=""; PORT=4000; AUDIO=""
-while getopts "o:p:a:h" opt; do
+VQ="${OHK_TV_QUALITY:-28}"; VKBPS="${OHK_TV_BITRATE:-}"; SCALE="${OHK_TV_SCALE:-}"
+FPS="${OHK_TV_FPS:-30}"; AKBPS="${OHK_TV_ABITRATE:-128}"; SEG_SEC="${OHK_TV_SEG:-0.5}"
+while getopts "o:p:a:q:b:s:r:A:l:h" opt; do
 	case $opt in
 		o) OUTPUT="$OPTARG";;
 		p) PORT="$OPTARG";;
 		a) AUDIO="$OPTARG";;
+		q) VQ="$OPTARG";;
+		b) VKBPS="$OPTARG";;
+		s) SCALE="$OPTARG";;
+		r) FPS="$OPTARG";;
+		A) AKBPS="$OPTARG";;
+		l) SEG_SEC="$OPTARG";;
 		h) grep '^#' "$0" | sed 's/^# \?//'; exit 0;;
 		*) exit 1;;
 	esac
@@ -86,14 +116,34 @@ cleanup(){ [ "$CLEANED" = 1 ] && return; CLEANED=1; pkill -TERM -P $$ 2>/dev/nul
 trap 'cleanup; exit 0' INT TERM
 trap cleanup EXIT
 
-echo "Capturing $OUTDESC with audio '$AUDIO'"
 # Latency budget: a segment can only be published once it is COMPLETE, and the player then
 # sits liveSyncDurationCount segments behind the edge. So end-to-end delay scales with
-# SEGMENT length — 0.5s segments with a matching 0.5s keyframe interval (g=15 @30fps) roughly
-# halve it versus 1s. Every segment must start on a keyframe, so g MUST match hls_time.
-SEG_SEC=0.6
-wf-recorder "${WFOUT[@]}" -c h264_vaapi -d /dev/dri/renderD128 -r 30 -p g=15 -p bf=0 \
-	--audio="$AUDIO" -C aac -m mpegts -f "$FIFO" 2>"$D/wf.log" &
+# SEGMENT length — 0.5s segments roughly halve it versus 1s. Every segment must start on a
+# keyframe, so the GOP is derived from SEG_SEC (g = fps x seg) instead of being hardcoded:
+# a longer -l then buys bandwidth back (keyframes are by far the most expensive frames, which
+# is why an idle splash screen still costs ~1 Mbps at 2 keyframes/sec) at the cost of delay.
+GOP="$(awk -v f="$FPS" -v s="$SEG_SEC" 'BEGIN{g=int(f*s+0.5); print (g<1?1:g)}')"
+# Rate control. Left alone the VAAPI encoder runs constant-quality at its own (very generous)
+# default QP; -q just moves that QP. Quality-based is the right default for karaoke because the
+# picture is cheap most of the time (splash, a static album image, black + lyrics) and only a
+# real music video costs anything — a bitrate TARGET would hand those cheap frames a budget to
+# spend. -b is there for when a hard ceiling matters more. NOTE wf-recorder's own -b means
+# BFRAMES, so both paths go through -p (options on the codec context).
+if [ -n "$VKBPS" ]; then
+	RC=(-p rc_mode=VBR -p b=$((VKBPS * 1000)) -p maxrate=$((VKBPS * 1250)) -p bufsize=$((VKBPS * 2000)))
+	RCDESC="VBR ${VKBPS}k (peak $((VKBPS * 5 / 4))k)"
+else
+	RC=(-p rc_mode=CQP -p qp="$VQ")
+	RCDESC="quality qp=$VQ"
+fi
+FILTER=()
+[ -n "$SCALE" ] && FILTER=(-F "scale_vaapi=w=-2:h=$SCALE:format=nv12")
+
+echo "Capturing $OUTDESC with audio '$AUDIO'"
+echo "Video: ${SCALE:+${SCALE}p }$RCDESC @ ${FPS}fps, keyframe/segment ${SEG_SEC}s, audio ${AKBPS}k"
+wf-recorder "${WFOUT[@]}" -c h264_vaapi -d /dev/dri/renderD128 -r "$FPS" \
+	-p g="$GOP" -p bf=0 "${RC[@]}" "${FILTER[@]}" \
+	--audio="$AUDIO" -C aac -P b="$((AKBPS * 1000))" -m mpegts -f "$FIFO" 2>"$D/wf.log" &
 WF=$!
 # fast TS probe (-analyzeduration/-probesize) so ffmpeg opens immediately instead of analyzing ~5s;
 # nobuffer/low_delay stop it holding frames back. temp_file matters at this segment size: without

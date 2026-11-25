@@ -11,6 +11,7 @@
 # via --cloud, so the in-app splitter would be redundant.
 #
 # Usage:  ./start-karaoke.sh [-t] [-c] [-a PASS] [-m WHISPER_MODEL] [-d SONG_DIR] [-p ASR_PORT]
+#                           [-q TV_QP] [-s TV_HEIGHT]
 #   -t  run karaoke hidden + stream only it to the TV browser (open http://<ip>:4000)
 #   -c  also publish it through the Cloudflare tunnel:
 #         karaoke.timbear.gratis -> the phone UI      (guests)
@@ -21,6 +22,9 @@
 #   -m  Whisper model: tiny|base|small|medium|large-v3   (default: medium)
 #   -d  song download dir                                (default: ~/pikaraoke-songs)
 #   -p  ASR server port                                  (default: 5005)
+#   -q  TV stream quality, QP 20-34                      (default: 28; higher = lighter)
+#   -s  scale the TV stream down to this height, px      (default: none = 720p)
+#       -q/-s only matter with -t/-c. Lighter still: -q 30 -s 540 (see ./stream-tv.sh -h)
 #
 # Examples:
 #   ./start-karaoke.sh           app + voice search only
@@ -37,12 +41,14 @@ ASR_PORT=5005
 WITH_TV=0
 WITH_CF=0
 ADMIN_PW=""
+TV_QUALITY=""      # encoder QP; empty = stream-tv.sh's own default
+TV_SCALE=""        # output height in px; empty = native
 CF_CONFIG="$HOME/.cloudflared/karaoke-config.yml"
 # public hostnames served by that tunnel (must match its ingress rules)
 CF_URL="https://karaoke.timbear.gratis"
 CF_TV_URL="https://tv.timbear.gratis"
 
-while getopts "tca:m:d:p:h" opt; do
+while getopts "tca:m:d:p:q:s:h" opt; do
 	case $opt in
 		t) WITH_TV=1;;
 		c) WITH_CF=1; WITH_TV=1;;
@@ -50,6 +56,8 @@ while getopts "tca:m:d:p:h" opt; do
 		m) MODEL="$OPTARG";;
 		d) DL="$OPTARG";;
 		p) ASR_PORT="$OPTARG";;
+		q) TV_QUALITY="$OPTARG";;
+		s) TV_SCALE="$OPTARG";;
 		h) grep '^#' "$0" | sed 's/^# \?//'; exit 0;;
 		*) exit 1;;
 	esac
@@ -89,7 +97,12 @@ fi
 tmux new-session -d -s "$SESSION" -n karaoke "$PY asr_server.py -m '$MODEL' -p '$ASR_PORT'; echo; echo '[asr_server exited]'; exec bash"
 # pane 2: the karaoke app (no -V). With -t: hidden in cage + streamed to the TV; else: on your monitor.
 if [ "$WITH_TV" = 1 ]; then
-	tmux split-window -t "$SESSION" "OHK_TV_PORT=4000 ./_headless.sh -d '$DL' -nv $ADMIN_OPT $URL_OPT --cloud http://localhost:$ASR_PORT; echo; echo '[headless karaoke exited]'; exec bash"
+	# stream settings go inline in the command, not exported: the tmux SERVER may already be
+	# running for some other session, in which case it keeps its old environment.
+	TV_ENV="OHK_TV_PORT=4000"
+	[ -n "$TV_QUALITY" ] && TV_ENV="$TV_ENV OHK_TV_QUALITY='$TV_QUALITY'"
+	[ -n "$TV_SCALE" ] && TV_ENV="$TV_ENV OHK_TV_SCALE='$TV_SCALE'"
+	tmux split-window -t "$SESSION" "$TV_ENV ./_headless.sh -d '$DL' -nv $ADMIN_OPT $URL_OPT --cloud http://localhost:$ASR_PORT; echo; echo '[headless karaoke exited]'; exec bash"
 else
 	tmux split-window -t "$SESSION" "$PY app.py -d '$DL' -nv $ADMIN_OPT $URL_OPT --cloud http://localhost:$ASR_PORT; echo; echo '[app exited]'; exec bash"
 fi
