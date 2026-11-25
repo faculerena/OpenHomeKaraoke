@@ -152,15 +152,12 @@ rbutton:focus:not(:active) {box-shadow: #28aaff40 0 0 0 .125em;}
 	<div id="welcome" class="dark_overlay"></div>
 	<div id="welcomePanel" class="above_overlay" style="height: auto;">
 		<div class="box" style="max-height: 80vh; overflow: auto;">
-			<h1 style="font-size: x-large; font-weight: bold; text-align: center; margin-bottom: 0.6em;">🎂 MEGACUMPLEAÑOS!! 🎂</h1>
+			<h1 style="font-size: x-large; font-weight: bold; text-align: center; margin-bottom: 0.6em;">{{ welcome.title }}</h1>
 			<ul style="list-style: disc; margin-left: 1.1em; line-height: 1.5;">
-				<li>Agreguen canciones en la lupita o en la carpeta si ya están descargadas.</li>
-				<li>Prioricen que las canciones sean de <b>KARAOKE MUGEN</b> (🎤) o que sean versiones <b>Karaoke</b> (🎵).</li>
-				<li>No pausen canciones de otros.</li>
-				<li>Pueden tocar <b>MUSIC | MIXED | VOICE</b> para sacarle la voz a alguna canción.</li>
-				<li>Díganle feliz cumple a Mega 🥳</li>
+				{% for line in welcome.lines %}<li>{{ line }}</li>
+				{% endfor %}
 			</ul>
-			<label style="display: block; margin-top: 1em;">Tu nombre:</label>
+			<label style="display: block; margin-top: 1em;">{{ welcome.name_label }}</label>
 			<input id="welcomeName" class="input" type="text" style="margin-top: 0.3em;">
 			<div style="text-align: center; margin-top: 1em;">
 				<rbutton onclick="closeWelcome()">OK</rbutton>
@@ -461,7 +458,10 @@ function doAdminLogin(){
 	});
 }
 
-// welcome / help popup — shown once per device, reopenable from the "?" in the navbar
+// welcome / help popup — shown once per device, reopenable from the "?" in the navbar.
+// Its text comes from the admin panel; the cookie holds the version of the message the
+// phone dismissed, so editing the message shows the new one once.
+var WELCOME_VERSION = {{ welcome.version | tojson }};
 function openWelcome(){
 	currentUser = Cookies.get("user") || currentUser || "";
 	$('#welcomeName').val(currentUser);
@@ -473,7 +473,7 @@ function closeWelcome(){
 		if(currentUser) $.get(`/user_rename/${encodeURIComponent(currentUser)}/${encodeURIComponent(n)}`);
 		set_user(n);
 	}
-	Cookies.set("seen_welcome", "1", { expires: 3650 });
+	Cookies.set("seen_welcome", WELCOME_VERSION, { expires: 3650 });
 	$('#welcome, #welcomePanel').hide();
 }
 $('#help').click(function(e){ e.preventDefault(); closeNav(); openWelcome(); });
@@ -481,7 +481,7 @@ $('#help').click(function(e){ e.preventDefault(); closeNav(); openWelcome(); });
 // handle browser language
 load_cur_user();
 // first visit: let load_cur_user()'s /auto_username settle so the field is pre-filled
-if(!Cookies.get("seen_welcome")) setTimeout(openWelcome, 600);
+{% if welcome.auto %}if(Cookies.get("seen_welcome") !== WELCOME_VERSION) setTimeout(openWelcome, 600);{% endif %}
 var currentLang = Cookies.get("lang");
 if(!currentLang){
 	currentLang = window.navigator.language;

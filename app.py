@@ -18,6 +18,7 @@ from collections import defaultdict
 from lib.get_platform import *
 from lib.vlcclient import get_default_vlc_path
 from lib.lyrics import get_lyrics
+from panel import config as ohk_config
 
 try:
 	from urllib.parse import quote, unquote
@@ -135,11 +136,28 @@ def is_admin():
 	return False
 
 
+def welcome_popup():
+	"""The guests' welcome popup, as set in the admin panel. Read on every page load (one small
+	JSON file), so edits show up without restarting. Text is escaped; only **bold** is markup."""
+	import re
+	from markupsafe import Markup, escape
+	cfg = ohk_config.load()
+	bold = lambda t: Markup(re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', str(escape(t))))
+	return {
+		'auto': cfg['welcome_enabled'],
+		'title': cfg['welcome_title'],
+		'lines': [bold(L.strip()) for L in cfg['welcome_text'].splitlines() if L.strip()],
+		'name_label': cfg['welcome_name_label'],
+		'version': ohk_config.welcome_version(cfg),
+	}
+
+
 @app.route("/")
 def root():
 	s = K.get_state()
 	return render_template(
 		"index.html",
+		welcome = welcome_popup(),
 		getString1 = lambda ii: getString1(request.client_lang, ii),
 		show_transpose = K.use_vlc,
 		transpose_value = K.now_playing_transpose,

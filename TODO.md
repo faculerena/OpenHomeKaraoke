@@ -63,6 +63,10 @@ remembering `./start-karaoke.sh` flags and reading tmux panes.
   launchers refuse while the other is running; "check now" fetches fine from inside the
   service; the pre-split job (split the 3 songs that had no stems) and the yt-dlp
   update job.
+- A real second machine as the TV (bastet, a laptop on the same Wi-Fi): Chrome kiosk on the
+  HLS page plays in sync, ~0.5-1.3s behind live, unmuted.
+- Guest welcome popup: edited from the panel, served on the next page load without a
+  restart, escaped (only **bold** is markup), auto-show toggle works.
 - Public mode refuses to start without an admin password. Cleanup tested on a scratch
   library: moves only orphans/old partials, refuses real songs and path tricks.
 
